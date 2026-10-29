@@ -3,22 +3,12 @@ from __future__ import annotations
 import asyncio
 from dataclasses import replace
 import json
-import os
 from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import patch
-
-# AstrBot resolves its data directory during import.  Redirect that import-time
-# state before loading the real SDK so this contract test cannot create a data/
-# tree in the repository.
-_previous_astrbot_root = os.environ.get("ASTRBOT_ROOT")
-_astrbot_import_root = None
-if _previous_astrbot_root is None:
-    _astrbot_import_root = TemporaryDirectory(prefix="companion-v2-host-import-")
-    os.environ["ASTRBOT_ROOT"] = _astrbot_import_root.name
 
 from astrbot_host.controller import AstrBotStagingController
 from astrbot_host.management_identity import dashboard_operator
@@ -36,12 +26,6 @@ from companion_v2.screen import SCREEN_EXTENSION, SCREEN_PROCESS, SCREEN_READ
 from tests.native_adapter_support import completion, FakeEvent, FakeHostContext, FakeProvider, FakeReverseApi
 from tests.staging_bootstrap_support import database_contents, wait_for_batch
 from tests.test_management_access import NOW
-
-
-def tearDownModule():
-    if _astrbot_import_root is not None:
-        os.environ.pop("ASTRBOT_ROOT", None)
-        _astrbot_import_root.cleanup()
 
 
 def host_config(**changes):

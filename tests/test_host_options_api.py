@@ -1,30 +1,11 @@
 """Dashboard contract for host-wide voice and received-poke defaults."""
 
 import asyncio
-import atexit
 import json
-import os
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import AsyncMock, patch
-
-# AstrBot resolves its data root at import time; host API tests keep that root isolated.
-_previous_astrbot_root = os.environ.get("ASTRBOT_ROOT")
-_astrbot_test_root = TemporaryDirectory(prefix="companion-v2-host-options-")
-os.environ["ASTRBOT_ROOT"] = _astrbot_test_root.name
-
-
-def _cleanup_astrbot_test_root():
-    _astrbot_test_root.cleanup()
-    if _previous_astrbot_root is None:
-        os.environ.pop("ASTRBOT_ROOT", None)
-    else:
-        os.environ["ASTRBOT_ROOT"] = _previous_astrbot_root
-
-
-atexit.register(_cleanup_astrbot_test_root)
 
 from astrbot_host.host_options_api import HostOptionsWebAPI, PREFIX as HOST_OPTIONS_PREFIX
 from companion_v2.conversation.forwards.models import ForwardIntakePolicy
