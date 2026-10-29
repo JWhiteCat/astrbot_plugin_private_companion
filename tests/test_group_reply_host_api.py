@@ -132,6 +132,28 @@ class GroupReplyHostAPITests(GroupFixture, unittest.IsolatedAsyncioTestCase):
         payload, _ = self.native.provider.client.state.calls[-1]
         self.assertNotIn("群唤醒参考", payload["messages"][1]["content"])
 
+    async def test_public_addresses_are_saved_validated_and_bound_to_the_current_speaker(self):
+        await self.start_host()
+        addresses = json.dumps({"qq-main": {"200": "主人", "201": "另一位成员"}}, ensure_ascii=False)
+        changed = await self.save({"group_public_addresses": addresses}, key="public-addresses")
+        self.assertEqual(changed["status"], "ok", changed)
+        self.assertEqual(changed["data"]["status"]["settings"]["group_public_addresses"], addresses)
+        await self.receive_group()
+        payload, _ = self.native.provider.client.state.calls[-1]
+        instruction = "\n".join(message["content"] for message in payload["messages"] if isinstance(message["content"], str))
+        self.assertIn('"public_address": "主人"', instruction)
+        self.assertNotIn("另一位成员", instruction)
+        await self.receive_group(sender="202")
+        payload, _ = self.native.provider.client.state.calls[-1]
+        self.assertNotIn("public_address", "\n".join(message["content"] for message in payload["messages"] if isinstance(message["content"], str)))
+        invalid = await self.save({"group_public_addresses": '{"qq-main": "主人"}'}, key="invalid-public-address")
+        self.assertEqual(invalid["status"], "error", invalid)
+        cleared = await self.save({"group_public_addresses": "{}"}, key="clear-public-address")
+        self.assertEqual(cleared["status"], "ok", cleared)
+        await self.receive_group()
+        payload, _ = self.native.provider.client.state.calls[-1]
+        self.assertNotIn("public_address", "\n".join(message["content"] for message in payload["messages"] if isinstance(message["content"], str)))
+
     async def test_wakeup_preferences_use_original_speaker_and_preview_is_offline(self):
         await self.start_host()
         status = await self.request()

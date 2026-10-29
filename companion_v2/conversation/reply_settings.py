@@ -96,6 +96,7 @@ GROUP_WAKEUP_LIMITS = {"group_wakeup_question_threshold": (0, 100),
 GROUP_SAFETY_DEFAULTS = {"enable_group_injection_guard": True,
                          "enable_group_privacy_guard": True,
                          "enable_group_reality_promise_guard": True}
+GROUP_ADDRESSING_DEFAULTS = {"group_public_addresses": "{}"}
 
 # Master switches for the decision page's silence policy. Detail windows remain
 # in their own sections; this is the one place that says whether that source may
@@ -135,7 +136,8 @@ ROLE_SHARED_FIELDS = (frozenset(asdict(SegmentationPolicy())) | SPACING_FIELDS
     | frozenset(GROUP_CONTINUATION_DEFAULTS) | frozenset(PRIVATE_CLOSING_DEFAULTS)
     | frozenset(PRIVATE_DEBOUNCE_DEFAULTS)
     | (frozenset(GROUP_WAKEUP_DEFAULTS) - GROUP_WAKEUP_GROUP_FIELDS)
-    | frozenset(GROUP_SAFETY_DEFAULTS) | frozenset(SILENCE_DEFAULTS) | frozenset(OUTBOUND_DEFAULTS) | frozenset(TEXT_DEFAULTS)
+    | frozenset(GROUP_SAFETY_DEFAULTS) | frozenset(GROUP_ADDRESSING_DEFAULTS)
+    | frozenset(SILENCE_DEFAULTS) | frozenset(OUTBOUND_DEFAULTS) | frozenset(TEXT_DEFAULTS)
     | frozenset(FORWARD_DEFAULTS) | frozenset(CONTEXT_IMAGE_DEFAULTS)
     | frozenset(IMAGE_NARRATION_DEFAULTS) | frozenset(UNDERSTANDING_DEFAULTS)
     | frozenset(DIAGNOSTIC_DEFAULTS) | ROLE_PROMPT_FIELDS)
@@ -160,6 +162,43 @@ def group_safety_settings(values):
     if any(type(value) is not bool for value in settings.values()):
         raise ConfigurationError("reply_configuration_invalid", "group safety switches must be boolean")
     return settings
+
+
+def group_public_addresses(values):
+    """Validate public names keyed by platform instance and native account ID.
+
+    Args:
+        values: Effective reply settings, including the JSON address map.
+
+    Returns:
+        Public names grouped by exact platform instance and account IDs.
+
+    Raises:
+        ConfigurationError: If the map or any identifier or name is invalid.
+    """
+    raw = values.get("group_public_addresses", "{}")
+    try:
+        if type(raw) is not str or len(raw) > 16384:
+            raise ValueError("public address map must be JSON text within 16384 characters")
+        addresses = json.loads(raw)
+        if type(addresses) is not dict or len(addresses) > 32:
+            raise ValueError("public addresses require at most 32 platform instances")
+        count = 0
+        for platform, members in addresses.items():
+            if (not platform or len(platform) > 128 or platform != platform.strip()
+                    or not platform.isprintable() or type(members) is not dict):
+                raise ValueError("invalid public address platform instance")
+            count += len(members)
+            for account_id, name in members.items():
+                if (not account_id or len(account_id) > 128 or account_id != account_id.strip()
+                        or not account_id.isprintable() or type(name) is not str
+                        or not 1 <= len(name) <= 40 or name != name.strip() or not name.isprintable()):
+                    raise ValueError("public addresses require exact account IDs and printable names of 1 to 40 characters")
+        if count > 64:
+            raise ValueError("public addresses require at most 64 members")
+    except (ValueError, TypeError) as error:
+        raise ConfigurationError("reply_configuration_invalid", str(error)) from error
+    return addresses
 
 
 def silence_settings(values):
@@ -290,6 +329,7 @@ def validate(values):
     private_debounce = set(PRIVATE_DEBOUNCE_DEFAULTS)
     wakeup = set(GROUP_WAKEUP_DEFAULTS)
     safety = set(GROUP_SAFETY_DEFAULTS)
+    addressing = set(GROUP_ADDRESSING_DEFAULTS)
     silence = set(SILENCE_DEFAULTS)
     outbound = set(OUTBOUND_DEFAULTS)
     forward = set(FORWARD_DEFAULTS)
@@ -302,7 +342,7 @@ def validate(values):
     optional = set(values) - expected - {"image_position"}
     provided = set(values)
     if (not legacy_required <= provided
-            or optional - voice - air - continuation - private_closing - private_debounce - wakeup - safety - silence - presentation - outbound - forward - captions - image_narration - understanding - spacing - diagnostics
+            or optional - voice - air - continuation - private_closing - private_debounce - wakeup - safety - addressing - silence - presentation - outbound - forward - captions - image_narration - understanding - spacing - diagnostics
             or (optional & voice and not (voice - {"voice_conversion_scope"}) <= optional)
             or any(optional & block and not block <= optional for block in (air, continuation, private_closing, private_debounce, presentation))
             or optional & spacing not in (set(), spacing)
@@ -338,6 +378,7 @@ def validate(values):
         private_debounce_settings(values)
         group_wakeup_settings(values)
         group_safety_settings(values)
+        group_public_addresses(values)
         silence_settings(values)
         outbound_settings(values)
         forward_values = {**FORWARD_DEFAULTS, **{name: values[name] for name in forward if name in values}}
@@ -386,7 +427,8 @@ def configuration_fields(segmentation, streaming, gap, voice=None):
               **SPACING_DEFAULTS, "image_position": "after_text", **voice_settings(voice), **GROUP_AIR_DEFAULTS,
               **GROUP_CONTINUATION_DEFAULTS, **PRIVATE_CLOSING_DEFAULTS,
               **PRIVATE_DEBOUNCE_DEFAULTS, **GROUP_WAKEUP_DEFAULTS,
-              **GROUP_SAFETY_DEFAULTS, **SILENCE_DEFAULTS, **OUTBOUND_DEFAULTS, **TEXT_DEFAULTS}
+              **GROUP_SAFETY_DEFAULTS, **GROUP_ADDRESSING_DEFAULTS,
+              **SILENCE_DEFAULTS, **OUTBOUND_DEFAULTS, **TEXT_DEFAULTS}
     # The field remains in the backend contract so older snapshots can still
     # be read, but it is no longer a choice: deterministic rule completion is
     # always active whenever segmentation itself is enabled.
@@ -417,6 +459,7 @@ def configuration_fields(segmentation, streaming, gap, voice=None):
                                           "group_wakeup_interest_probability") else
         {bool: ValueKind.BOOLEAN, int: ValueKind.INTEGER, float: ValueKind.PROBABILITY, str: ValueKind.TEXT}[type(value)], value,
         layers=CONFIGURATION_LAYERS, owner_id=OWNER,
+        **({"maximum_chars": 16384} if name == "group_public_addresses" else {}),
         **(dict(zip(("minimum", "maximum"), limits[name])) if name in limits else {}),
         **({"decimal_places": 1} if name == "part_gap_log_base" else {}))
         for name, value in defaults.items())

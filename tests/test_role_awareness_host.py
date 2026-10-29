@@ -5,6 +5,9 @@ import json
 import unittest
 
 from companion_v2.execution.models import TaskContext
+from companion_v2.configuration.models import ConfigLayer, ConfigTarget
+from companion_v2.conversation.reply_settings import GROUP, ReplyConfigurationOwner, configuration_fields
+from companion_v2.conversation.segmentation import SegmentationPolicy
 from tests.group_host_support import GroupFixture
 from tests.staging_bootstrap_support import wait_for_batch
 
@@ -110,6 +113,28 @@ class RoleAwarenessHostTests(GroupFixture, unittest.IsolatedAsyncioTestCase):
         self.assertIn("【跨窗口在场】", group["prompt_instruction"])
         self.assertIn("private_contact", group["prompt_instruction"])
         self.assertNotIn("私聊里的秘密", group["prompt_instruction"])
+
+    async def test_native_group_uses_role_public_address_without_private_relationship_data(self):
+        await self.prepare(self.event(target="first", identifier="public-private", text="私聊里的秘密"))
+        seed = await self.prepare(self.group_event(identifier="public-seed", sender="200"))
+        context = seed["context"]
+        owner = ReplyConfigurationOwner(self.app.runtime)
+        fields = configuration_fields(SegmentationPolicy(), True, 0)
+        target = ConfigTarget(context.scope.installation_id, ConfigLayer.ROLE,
+                              context.role_binding.role, bot_id=context.scope.bot_id)
+        snapshot = owner.read(target, fields)
+        owner.write(target, fields, changes={
+            GROUP + ".group_public_addresses": json.dumps(
+                {"qq-main": {"200": "主人", "202": "其他人的专属称呼"}}, ensure_ascii=False),
+        }, reset=(), expected_revision=snapshot.revision, observed_at=self.clock.now())
+        matched = await self.prepare(self.group_event(identifier="public-matched", sender="200"))
+        self.assertIn('"public_address": "主人"', matched["prompt_instruction"])
+        self.assertNotIn("私聊里的秘密", matched["prompt_instruction"])
+        self.assertNotIn("其他人的专属称呼", matched["prompt_instruction"])
+        other = await self.prepare(self.group_event(identifier="public-other", sender="201"))
+        self.assertNotIn("public_address", other["prompt_instruction"])
+        private = await self.prepare(self.event(target="first", identifier="public-private-after", text="你好"))
+        self.assertNotIn("public_address", private["prompt_instruction"])
 
     async def test_private_prompt_sees_a_bounded_peer_count(self):
         await self.prepare(self.group_event(identifier="aware-peer-first", sender="201", text="我先说一句"))
