@@ -349,3 +349,120 @@ class OfficialMultiHostTests(MultiFixture, unittest.IsolatedAsyncioTestCase):
         session, chain = self.native.platform.sent[0]
         self.assertEqual(str(session), f"{ACCOUNT}:GroupMessage:{GROUP_OPENID}")
         self.assertIn("我在这里", chain.get_plain_text())
+
+    async def test_raw_group_recipients_control_weak_wakeup_without_changing_explicit_calls(
+        self,
+    ):
+        from companion_v2.conversation.reply_settings import (
+            ReplyConfigurationOwner,
+            configuration_fields,
+            target_for,
+        )
+
+        self.window_personas[f"{ACCOUNT}:GroupMessage:{GROUP_OPENID}"] = "original"
+        self.config = multi_config(
+            accounts=[
+                {"platform_id": ACCOUNT, "account_id": ACCOUNT, "bot_id": "bot-test"}
+            ],
+            targets=[],
+            personas=[
+                {"bot_id": "bot-test", "persona_id": "original", "role_id": "role-a"}
+            ],
+            group_targets=[
+                {
+                    "target_id": "official-group",
+                    "platform_id": ACCOUNT,
+                    "account_id": ACCOUNT,
+                    "bot_id": "bot-test",
+                    "group_id": GROUP_OPENID,
+                }
+            ],
+        )
+        self.controller = self.make_controller(self.config)
+        app = await self.start_host()
+        settings_event = OfficialEvent(self.native.platform, group=True)
+        context = (await self.controller.observe_group_early(settings_event)).unwrap()
+        common = self.controller.settings.common
+        owner = ReplyConfigurationOwner(app.runtime)
+        fields = configuration_fields(
+            common.segmentation, common.streaming, common.policy.part_gap_seconds
+        )
+        target = target_for(context)
+        changes = {
+            "group_wakeup_question_enabled": True,
+            "group_wakeup_interest_keywords": json.dumps(["星图"], ensure_ascii=False),
+            "group_wakeup_interest_probability": 1,
+            "group_wakeup_bot_name": "小星",
+        }
+        owner.write(
+            target,
+            fields,
+            changes={
+                "conversation.presentation." + key: value for key, value in changes.items()
+            },
+            reset=(),
+            expected_revision=owner.read(target, fields).revision,
+            observed_at=self.clock.now(),
+        )
+
+        cases = (
+            ("question", "谁知道如何修复这个错误？", None, (), False, "question"),
+            ("interest", "这张星图很好看", None, (), False, "interest"),
+            ("name", "小星帮我看看", None, (), False, "direct_word"),
+            ("other-question", "<@member-1> 谁知道如何修复这个错误？", None, (), False, ""),
+            ("other-interest", "<@!member-1> 这张星图很好看", None, (), False, ""),
+            (
+                "other-name",
+                '<qqbot-at-user id="member-1"/> 小星帮我看看',
+                None,
+                (),
+                False,
+                "",
+            ),
+            (
+                "metadata-other",
+                "谁知道如何修复这个错误？",
+                [{"id": "member-1", "is_you": False}],
+                (),
+                False,
+                "",
+            ),
+            (
+                "metadata-bot",
+                "谁知道如何修复这个错误？",
+                [{"id": "bot-openid", "is_you": True}],
+                (),
+                False,
+                "mention",
+            ),
+            ("raw-placeholder", "<@qq_official> 帮我看看", None, (), False, "mention"),
+            (
+                "mixed",
+                "<@member-1> 大家好",
+                None,
+                (At(qq="qq_official"),),
+                False,
+                "mention",
+            ),
+            ("native-word", "继续", None, (), True, "native_wakeup"),
+            (
+                "native-word-with-other",
+                "<@member-1> /帮忙看看",
+                None,
+                (),
+                True,
+                "native_wakeup",
+            ),
+        )
+        for identifier, text, mentions, parts, native_wakeup, expected in cases:
+            with self.subTest(identifier=identifier):
+                event = OfficialEvent(self.native.platform, group=True, text=text)
+                event.message_obj.message_id = "raw-recipient-" + identifier
+                event.message_obj.message = [*parts, Plain(text=text)]
+                event.message_obj.raw_message = NS(content=text, mentions=mentions)
+                event.is_at_or_wake_command = native_wakeup
+                decision = (await self.controller.group_reply_candidate(event)).unwrap()
+                self.assertEqual(decision["reason"], expected, decision)
+                self.assertEqual(decision["admitted"], bool(expected), decision)
+        self.assertEqual(self.native.platform.sent, [])
+        self.assertEqual(self.native.provider.client.state.calls, [])
