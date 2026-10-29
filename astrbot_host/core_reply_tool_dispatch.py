@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 
 
 CORE_TOOL_DISPATCH_EXTRA = "_companion_v2_core_tool_dispatch"
@@ -108,8 +109,32 @@ def observe_core_tool_dispatch_begin(event, run_context):
     async def observed_step(*args, **kwargs):
         failed = False
         try:
-            async for item in original_step(*args, **kwargs):
-                yield item
+            core = event.get_extra(CORE_REPLY_CONTEXT_EXTRA)
+            # The first step may already be running when on_agent_begin binds
+            # this wrapper, so also honor a skip recorded by that initial step.
+            if not (isinstance(core, dict) and core.get("group_participation", {}).get("mode") == "skip"
+                    and active_core_runner(event, run_context) is runner):
+                async for item in original_step(*args, **kwargs):
+                    yield item
+            core = event.get_extra(CORE_REPLY_CONTEXT_EXTRA)
+            if (isinstance(core, dict) and core.get("group_participation", {}).get("mode") == "skip"
+                    and active_core_runner(event, run_context) is runner and not runner.done()):
+                # Finish only after every tool result has been added to history.
+                # Listening is a normal completion, not a user interruption or
+                # another model request for an intentionally empty final reply.
+                from astrbot.core.agent.runners.base import AgentState
+                from astrbot.core.provider.entities import LLMResponse
+
+                response = LLMResponse(role="assistant", completion_text="")
+                runner.final_llm_resp = response
+                runner._transition_state(AgentState.DONE)
+                runner.stats.end_time = time.time()
+                try:
+                    await runner.agent_hooks.on_agent_done(run_context, response)
+                except Exception:
+                    logger.exception("[CompanionV2] Error finalizing a skipped group turn")
+                finally:
+                    runner._resolve_unconsumed_follow_ups()
         except BaseException:
             failed = True
             raise

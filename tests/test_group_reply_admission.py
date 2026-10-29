@@ -169,6 +169,82 @@ class GroupReplyAdmissionTests(GroupFixture, unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(event.core_request.func_tool.get_tool(native_tool_name("group.participation.choose")))
         self.assert_no_v2_generation()
 
+    async def test_real_core_runner_finishes_skip_without_another_model_request(self):
+        from astrbot.core.agent.hooks import BaseAgentRunHooks
+        from astrbot.core.agent.runners.tool_loop_agent_runner import ToolLoopAgentRunner
+        from astrbot.core.astr_agent_tool_exec import FunctionToolExecutor
+        from astrbot.core.pipeline.process_stage.follow_up import _ACTIVE_AGENT_RUNNERS
+        from astrbot.core.provider.entities import LLMResponse, ProviderRequest
+        from astrbot_host.core_reply_tool_dispatch import (
+            CORE_TOOL_DISPATCH_EXTRA, restore_core_tool_dispatch,
+        )
+
+        for streaming in (False, True):
+            for schema_mode in ("full", "skills_like"):
+                with self.subTest(streaming=streaming, schema_mode=schema_mode):
+                    event = self.event(f"runner-skip-{streaming}-{schema_mode}", "有人知道怎么处理吗", mention=True)
+                    prepared = await self.core_turn(event)
+                    request = ProviderRequest(prompt="Should I join this conversation?", system_prompt="Group persona",
+                                              func_tool=event.core_request.func_tool)
+                    wrapper = NS(context=NS(event=event), messages=[], tool_call_timeout=5)
+                    calls, completed = [], []
+                    plugin = self.plugin
+
+                    async def text_chat(**arguments):
+                        calls.append(arguments)
+                        self.assertLessEqual(len(calls), 2 if schema_mode == "skills_like" else 1,
+                                             "A skipped group turn must not query the model again")
+                        return LLMResponse(role="assistant", completion_text="",
+                            tools_call_name=[native_tool_name("group.participation.choose")],
+                            tools_call_args=[{} if schema_mode == "skills_like" and len(calls) == 1
+                                             else {"mode": "skip", "reason": "Keep listening"}],
+                            tools_call_ids=[f"skip-call-{len(calls)}"])
+
+                    async def text_chat_stream(**arguments):
+                        yield await text_chat(**arguments)
+
+                    class Hooks(BaseAgentRunHooks):
+                        async def on_agent_begin(self, run_context):
+                            await plugin.observe_companion_core_agent_begin(event, run_context)
+
+                        async def on_agent_done(self, run_context, response):
+                            completed.append(response)
+                            await plugin.observe_companion_core_agent_done(event, run_context, response)
+
+                    provider = NS(provider_config={"id": "skip-model", "modalities": ["text"]},
+                                  get_model=lambda: "skip-model", text_chat=text_chat,
+                                  text_chat_stream=text_chat_stream)
+                    runner = ToolLoopAgentRunner()
+                    await runner.reset(provider, request, wrapper, FunctionToolExecutor(), Hooks(),
+                                       streaming=streaming, tool_schema_mode=schema_mode)
+                    _ACTIVE_AGENT_RUNNERS[event.unified_msg_origin] = runner
+                    self.addCleanup(_ACTIVE_AGENT_RUNNERS.pop, event.unified_msg_origin, None)
+                    self.addCleanup(restore_core_tool_dispatch, event)
+                    responses = [item async for item in runner.step_until_done(3)]
+
+                    self.assertTrue(runner.done())
+                    self.assertFalse(runner.was_aborted())
+                    self.assertEqual(len(calls), 2 if schema_mode == "skills_like" else 1)
+                    self.assertEqual(completed, [runner.final_llm_resp])
+                    self.assertEqual(runner.final_llm_resp.completion_text, "")
+                    self.assertGreater(runner.stats.end_time, 0)
+                    self.assertFalse(any(item.type in ("err", "aborted", "llm_result", "streaming_delta")
+                                         for item in responses))
+                    results = [message for message in wrapper.messages if message.role == "tool"]
+                    self.assertEqual(len(results), 1)
+                    result = json.loads(results[0].content)
+                    self.assertEqual(result["state"], "succeeded")
+                    self.assertEqual(result["payload"]["mode"], "skip")
+                    self.assertEqual(results[0].tool_call_id, f"skip-call-{len(calls)}")
+                    self.assertEqual(len(request.tool_calls_result), 1)
+                    self.assertNotIn("step", runner.__dict__)
+                    self.assertTrue(event.get_extra(CORE_TOOL_DISPATCH_EXTRA)["restored"])
+                    await self.flush_tracking()
+                    saved = self.admission.recorded_core_reply(prepared["context"], prepared["event_id"])
+                    self.assertEqual(saved["participation"]["mode"], "skip")
+                    self.assertEqual((saved["send_attempts"], saved["send_returns"]), (0, 0))
+                    self.assertEqual(event.sent, [])
+
     async def test_native_group_skip_is_silent_and_never_counts_as_a_successful_send_or_missing_reply(self):
         event = self.event("core-skip", "这个问题有人知道怎么处理吗")
         prepared = await self.core_turn(event)
