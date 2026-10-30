@@ -19,6 +19,62 @@ SHORT_REACTION = re.compile(r"^(?:啊|诶|欸|哈|草|不是|不会吧|真的假
                             r"为什么|为啥|怎么|咋|什么情况|啥情况)[，,。.\s]*[^，,。！？!?]{0,24}[?？]?$", re.I)
 
 
+def legacy_cold_group_score(text):
+    """Preserve V1 cold-group lexical scores without inventing state evidence.
+
+    Args:
+        text: Visible, recipient-checked group message text.
+
+    Returns:
+        The original opening, greeting, or help score; zero for other text.
+        Sleep and energy eligibility remain separate runtime state concerns.
+    """
+    cleaned = " ".join(str(text or "").split())[:260]
+    if not 3 <= len(cleaned) <= 120:
+        return 0
+    if re.search(r"^(?:[/!！#]|签到|打卡|菜单|帮助|help\b)", cleaned, flags=re.I):
+        return 0
+    if re.search(
+        r"(https?://|www\.|```|\[图片\]|\[语音\]|\[视频\]|\[转发消息\])",
+        cleaned,
+        flags=re.I,
+    ):
+        return 0
+    if re.search(
+        r"(有人吗|在吗|还在吗|睡了吗|怎么没人|好安静|冷群|冒泡|路过|诈尸|开门|醒醒)",
+        cleaned,
+    ):
+        return 86
+    if re.search(
+        r"(早|早上好|上午好|中午好|下午好|晚上好|晚好|嗨|hello|hi|哈喽|冒个泡|有人不|人呢)",
+        cleaned,
+        flags=re.I,
+    ):
+        return 72
+    if re.search(r"(急急如律令|急急国王|急急急急|急死谁了)", cleaned):
+        return 0
+    failure = (
+        r"(安装|配置|运行|启动|登录|请求|发送|上传|下载|连接|编译|构建|部署|调用|识别|读取|解析|保存|加载|同步|执行|支付|打开|导入|导出|更新|提交|注册|验证|接口|插件|程序|脚本|命令|模型|图片|语音|视频|文件|消息|任务).{0,8}失败"
+        r"|(?:一直|总是|老是|反复|还是|又).{0,6}失败|失败.{0,8}(怎么办|咋办|怎么弄|怎么解决|怎么处理|原因|报错|日志|重试|一直|总是|还是|又)"
+    )
+    if "救命" in cleaned and not (
+        re.search(
+            r"(怎么|咋办|怎么办|怎么弄|怎么解决|怎么处理|帮忙|帮我|报错|异常|卡住|跑不起来|急求|急问|在线等)",
+            cleaned,
+            flags=re.I,
+        )
+        or re.search(failure, cleaned, flags=re.I)
+    ):
+        return 0
+    if re.search(
+        r"(救命.{0,12}(怎么|咋办|怎么办|怎么弄|怎么解决|怎么处理|帮忙|帮我|报错|异常|卡住|跑不起来)|急求|急问|急用|急等|在线等|有点急|很急|比较急|挺急|急着|求问|请教|有没有人|有人懂|谁会|帮忙|咋办|怎么办|怎么弄|报错|崩了|卡住)",
+        cleaned,
+        flags=re.I,
+    ) or re.search(failure, cleaned, flags=re.I):
+        return 78
+    return 0
+
+
 def question_signal(text, *, recent=(), at=None, speaker_id="", bot_turns=(), cooldown_seconds=90):
     """Score an unsolicited question; explicit calls are admitted separately.
 

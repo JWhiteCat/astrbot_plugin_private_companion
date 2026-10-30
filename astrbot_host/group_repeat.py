@@ -56,6 +56,14 @@ def _other_speech_count(participation, context, native, settings, at):
     # other native replies here so successful repeats do not consume quota twice.
     record = _speech_record(tuple(turn for turn in turns if turn.get("reason") != "repeat"), visible, at=at,
         policy=participation._interjection_policy(settings, {}), timezone_name=participation.messages.timezone_name)
+    from companion_v2.conversation.legacy_group_runtime import LegacyGroupRuntime
+    from companion_v2.conversation.group_interjection import day_key
+    legacy = LegacyGroupRuntime(participation.runtime).read(context)
+    if legacy is not None:
+        group, _ = legacy
+        # This action store already reserves post-migration native repeats.
+        record["used_today"] = (max(0, group["interject_today"] - group.get("native_repeat_today", 0))
+            if group["interject_day"] == day_key(at, participation.messages.timezone_name) else 0)
     return visible, record["used_today"]
 
 

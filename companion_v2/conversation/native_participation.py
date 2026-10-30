@@ -96,6 +96,15 @@ def native_participation_turn(participation, context, native_input, settings):
     hints += observation_instruction(values, observation["facts"], group_safety_settings(settings))
     policy = participation._interjection_policy(values, settings)
     record = _speech_record(turns, visible, at=at, policy=policy, timezone_name=participation.messages.timezone_name)
+    from .legacy_group_runtime import LegacyGroupRuntime
+    legacy = LegacyGroupRuntime(participation.runtime).read(context)
+    if legacy is not None:
+        group, _ = legacy
+        record["used_today"] = (group["interject_today"]
+            if group["interject_day"] == day_key(at, participation.messages.timezone_name) else 0)
+        if group["last_interject_at"]:
+            from datetime import datetime, timezone
+            record["last_act_at"] = datetime.fromtimestamp(group["last_interject_at"], timezone.utc).isoformat()
     mood = (observation["facts"].get("mood") or {}).get("top_mood", "")
     facts = interjection_state(policy, record, at=at,
         initiative=bool(native_input.text) and not addresses_role(native_input.text, policy.address_words),

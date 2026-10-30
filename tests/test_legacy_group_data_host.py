@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import unittest
 from urllib.parse import urlencode
 from unittest.mock import patch
@@ -233,12 +232,102 @@ class LegacyGroupDataHostTests(GroupFixture, unittest.IsolatedAsyncioTestCase):
         replay_plan = (await self.request("/plan", query=query))["data"]
         self.assertEqual(replay_plan["group_expression"]["remaining"], 0)
         rows = self.controller.runtime.read_all(
-            "SELECT state, scope_key FROM expression_style_signals WHERE run_id LIKE 'legacy-expression:%'")
+            "SELECT state, scope_key FROM expression_style_signals WHERE run_id LIKE 'legacy-expression:%'", ())
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["state"], "adopted")
         context = LegacyGroupDataWebAPI(self.controller, "group-a", "role-a")._scope_context(
             self.controller.settings.target("group-a"))
         self.assertEqual(rows[0]["scope_key"], digest(context.scope))
+
+    async def test_group_history_is_complete_paged_queryable_and_scope_isolated(self):
+        from astrbot_host.group_authority import GroupAuthority
+        from companion_v2.legacy.private_memory import canonical
+        from tests.test_memory_ownership import external
+
+        root = self.source_root()
+        path = root / "companions.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        records = {"recent_messages": [{"text": "完整长消息" + "甲乙丙丁" * 15000,
+            "sender_id": "opaque_QQ-openid", "ts": self.clock.now().timestamp(), "message_id": "old-native-id"}],
+            "group_episodes": [{"summary": "旧群聊片段", "date": "2026-01-01", "avoid_next": ["保留状态"]}],
+            "topic_threads": [{"signature": "old-topic", "title": "原话题", "bot_joined": True,
+                "started_ts": self.clock.now().timestamp(), "recent_examples": ["原例子"]}]}
+        payload["groups"]["789"].update(records)
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        before = path.read_bytes()
+        app = await self.start_host()
+        plan = await self.plan(root)
+        self.assertEqual(plan["group_history"]["counts"], {key: 1 for key in records})
+        imported = await self.apply(plan, root)
+        self.assertEqual(imported["status"], "ok", imported)
+        self.assertFalse(imported["data"]["group_history"]["already_present"])
+        repeated = await self.apply(await self.plan(root), root)
+        self.assertTrue(repeated["data"]["group_history"]["already_present"])
+        app.memory.owner = external()
+        captured = (await self.controller.session.bridge.capture(self.group_event())).unwrap()
+        context = GroupAuthority(self.controller.session.authority).select(
+            self.controller.settings.target("group-a"), captured)
+        self.assertEqual([tool.action for tool in app.tools.group_memory.catalog_for(context)],
+                         ["group.memory.legacy.query"])
+        chunks, cursor = {}, None
+        for _ in range(100):
+            arguments = {"query": "", **({"cursor": cursor} if cursor else {})}
+            result, operation = app.tools.group_memory.execute(context, "read-only", "history",
+                "group.memory.legacy.query", arguments)
+            self.assertIsNone(operation)
+            validated, materials = app.tools.group_memory.validate({"batch_id": "read-only", "sequence": 1,
+                "action": "group.memory.legacy.query", "state": "succeeded"}, context, result)
+            self.assertEqual(validated, result)
+            self.assertIsNone(materials)
+            page = result["payload"]
+            for item in page["items"]:
+                self.assertFalse(item["current_fact"])
+                key = item["source_field"], item["source_index"]
+                chunks.setdefault(key, []).append((item["source_offset"] + item["excerpt_start"], item["text"]))
+            cursor = page["next_cursor"]
+            if cursor is None:
+                break
+        self.assertIsNone(cursor, "all original characters must be reachable through bounded pages")
+        self.assertEqual({key: "".join(text for _, text in sorted(parts)) for key, parts in chunks.items()},
+                         {(key, 0): canonical(value[0]) for key, value in records.items()})
+        for target_id in ("group-b", "group-c"):
+            other_capture = (await self.controller.session.bridge.capture(self.group_event(target_id))).unwrap()
+            other = GroupAuthority(self.controller.session.authority).select(
+                self.controller.settings.target(target_id), other_capture)
+            result, _ = app.tools.group_memory.execute(other, "read-only", "other-history",
+                "group.memory.legacy.query", {"query": ""})
+            self.assertEqual(result["payload"]["items"], [])
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(self.native.provider.client.state.calls, [])
+        for field in records:
+            payload["groups"]["789"][field] = []
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        cleared = await self.apply(await self.plan(root), root)
+        self.assertEqual(cleared["status"], "ok", cleared)
+        self.assertEqual(cleared["data"]["group_history"]["imported"], {"memories": 0, "timeline": 0})
+        self.assertFalse(cleared["data"]["group_history"]["already_present"])
+        empty, _ = app.tools.group_memory.execute(context, "read-only", "cleared-history",
+            "group.memory.legacy.query", {"query": ""})
+        self.assertEqual(empty["payload"]["items"], [])
+        replay = await self.apply(await self.plan(root), root)
+        self.assertTrue(replay["data"]["group_history"]["already_present"])
+
+    async def test_changed_group_history_invalidates_review_and_malformed_history_blocks(self):
+        root = self.source_root()
+        await self.start_host()
+        plan = await self.plan(root)
+        path = root / "companions.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["groups"]["789"]["recent_messages"] = [{"text": "changed after preview"}]
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        stale = await self.apply(plan, root)
+        self.assertEqual(stale["data"]["code"], "legacy_plan_stale")
+        payload["groups"]["789"]["recent_messages"] = "malformed collection"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        current = await self.plan(root)
+        self.assertTrue(current["group_history"]["rejected"])
+        rejected = await self.apply(current, root)
+        self.assertEqual(rejected["data"]["code"], "legacy_group_history_source_invalid")
 
 
 if __name__ == "__main__":

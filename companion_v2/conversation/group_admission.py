@@ -6,7 +6,8 @@ import json
 from companion_v2.execution.models import TaskError, digest, stamp
 from .group_observation import parse_moment
 from .group_timing import clean_group_text, repeat_burst, repeat_signature
-from .group_questions import question_signal
+from .group_questions import legacy_cold_group_score, question_signal
+from .legacy_group_runtime import LegacyGroupRuntime
 from .group_followup import FOLLOW_UP_REASONS, progress as followup_progress
 from .reply_settings import group_continuation_settings, group_wakeup_settings
 from .reset import batch_current, boundary
@@ -89,6 +90,8 @@ class GroupReplyAdmission:
             item["event_id"] = event_id
         if item not in self.observations[key]:
             self.observations[key].append(item)
+        LegacyGroupRuntime(self.runtime).observe(context, text=text, speaker_id=speaker_id,
+            received_at=received_at, event_id=event_id)
 
     def candidate(self, context, *, text, instruction, at, settings, participation,
                   mentioned=False, native_wakeup=False, mentions_others=False, reply_ids=(),
@@ -110,9 +113,18 @@ class GroupReplyAdmission:
             direct.append(wakeup["group_wakeup_bot_name"] or persona_name)
         if context.actor.principal.native_account_id in wakeup["group_wakeup_primary_member_ids"]:
             direct.extend(wakeup["group_wakeup_owner_direct_words"])
-        if (wakeup["group_wakeup_enabled"] and not mentions_others
-                and any(word and word.casefold() in compact.casefold() for word in direct)):
+        if (
+            wakeup["group_wakeup_enabled"]
+            and (not mentions_others or wakeup["group_wakeup_legacy_targeting"])
+            and any(word and word.casefold() in compact.casefold() for word in direct)
+        ):
             return "direct_word"
+        if wakeup["group_wakeup_legacy_targeting"] and (
+            mentions_others or mentions_all or reply_ids
+        ):
+            # V1 explicit names remain valid calls, but messages addressed to
+            # another recipient never activate question or interest wakeups.
+            return ""
         continuation = continuation if continuation is not None else self.continuation_status(
             context, instruction, at, settings=settings, event_id=event_id)
         if continuation["limit_reached"]:
@@ -157,14 +169,27 @@ class GroupReplyAdmission:
         if (wakeup["group_wakeup_interest_probability"] > 0
                 and any(word.casefold() in compact.casefold() for word in wakeup["group_wakeup_interest_keywords"])):
             return "interest"
+        if wakeup["group_wakeup_legacy_targeting"] and wakeup["group_wakeup_cold_group_enabled"]:
+            score = legacy_cold_group_score(compact)
+            if (score > 0 and score >= wakeup["group_wakeup_cold_group_threshold"]
+                    and LegacyGroupRuntime(self.runtime).cold_ready(context, at=at,
+                        event_id=event_id, idle_minutes=wakeup["group_wakeup_cold_group_idle_minutes"])):
+                return "cold_group"
         if participation["enable_group_interjection"]:
             from .group_interjection import openings
             signals = openings(compact)
             # Broad open_question cues cannot reopen disabled/below-threshold
             # public questions through the independent interjection switch.
-            if "refusal" not in signals and "joke_reaction" in signals:
+            if wakeup["group_wakeup_legacy_targeting"]:
+                if LegacyGroupRuntime(self.runtime).interject(context, compact, at=at,
+                        event_id=event_id, values=participation,
+                        timezone_name=self.messages.timezone_name):
+                    return "interjection"
+            elif "refusal" not in signals and "joke_reaction" in signals:
                 return "interjection"
         if wakeup["group_wakeup_cold_group_enabled"]:
+            if wakeup["group_wakeup_legacy_targeting"]:
+                return ""
             previous = [parse_moment(item["received_at"]) for item in items if item != current]
             previous = [when for when in previous if when is not None and when < at]
             if previous and (at - max(previous)).total_seconds() >= wakeup["group_wakeup_cold_group_idle_minutes"] * 60:
@@ -281,6 +306,8 @@ class GroupReplyAdmission:
                     saved["send_state"] = "started"
             elif stage == "send_returned":
                 if saved["send_returns"] == 0:
+                    LegacyGroupRuntime(self.runtime).record_returned(connection, context, saved,
+                        at=at, timezone_name=self.messages.timezone_name)
                     saved["first_returned_at"] = stamp(at)
                     previous = followup_progress([turn for turn in self._current_core_turns(
                         context, None, at, instruction_digest=saved["instruction_digest"]) if turn["event_id"] != event_id], at=at,

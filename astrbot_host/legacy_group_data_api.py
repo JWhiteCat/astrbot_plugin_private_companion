@@ -12,6 +12,8 @@ from companion_v2.foundation.outcome import Outcome
 from companion_v2.foundation.refs import ScopeKind, ScopeRef, SubjectKind, SubjectRef
 from companion_v2.knowledge.catalog import KnowledgeCatalog, MemberEntry, SourceBinding
 from companion_v2.legacy.data_migration import build_data_plan, map_legacy_worldbook
+from companion_v2.legacy.group_history import build_group_history_plan, import_group_history
+from companion_v2.conversation.legacy_group_runtime import build_import as build_admission_import, import_reviewed as import_admission
 from companion_v2.legacy.migration import LegacyMigration
 
 from .group_settings import GroupTarget
@@ -103,7 +105,19 @@ class LegacyGroupDataWebAPI:
             for item in members)
 
     def _plan(self, root, source_persona_id, source_group_id, target, session):
+        from .legacy_api import LegacyMigrationWebAPI
+        configuration, _ = LegacyMigrationWebAPI(self.controller)._read_v1_host_configuration()
+        try:
+            admission = build_admission_import(root, source_persona_id=source_persona_id,
+                source_group_id=source_group_id, configuration=configuration)
+        except TaskError as error:
+            if error.code != "legacy_group_runtime_unavailable":
+                raise
+            # A worldbook-only mapping has no live group state to restore.
+            admission = {"fingerprint": "", "source_error": error.code}
         data = build_data_plan(root, source_persona_id=source_persona_id)
+        history = build_group_history_plan(root, source_persona_id=source_persona_id,
+                                          source_group_id=source_group_id)
         selected = next((item for item in data.group_networks
                          if item["source_group_id"] == source_group_id), None)
         groups = data.document().get("worldbook", {}).get("groups", [])
@@ -136,6 +150,8 @@ class LegacyGroupDataWebAPI:
         worldbook_digest = self._worldbook_digest(group_entries, group_members)
         token_material = {
             "source_fingerprint": data.source_fingerprint, "persona": source_persona_id,
+            "history_fingerprint": history.source_fingerprint,
+            "admission_fingerprint": admission["fingerprint"],
             "source_group_id": source_group_id, "target": [target.target_id, target.platform_id,
                 target.account_id, target.bot_id, target.group_id, self.role_id],
             "graph_fingerprint": graph_fingerprint,
@@ -150,6 +166,10 @@ class LegacyGroupDataWebAPI:
         return {"plan_token": token, "source_fingerprint": data.source_fingerprint,
             "source_persona_id": source_persona_id, "source_group_id": source_group_id,
             "source_group_network": selected_doc,
+            "group_history": history.document(),
+            "group_admission": {"fingerprint": admission["fingerprint"],
+                                "available": not bool(admission.get("source_error")),
+                                "state_evolution_equivalent": False},
             "group_expression": expression,
             "target": {"target_id": target.target_id, "platform_id": target.platform_id,
                 "account_id": target.account_id, "bot_id": target.bot_id,
@@ -203,6 +223,10 @@ class LegacyGroupDataWebAPI:
                     "confirm the same group and role for the imported expression rules."))
     
             data = build_data_plan(root, source_persona_id=arguments["source_persona_id"])
+            history = build_group_history_plan(root, source_persona_id=arguments["source_persona_id"],
+                                              source_group_id=arguments["source_group_id"])
+            if arguments["import_group_network"] and (history.source_error or history.rejected):
+                raise TaskError("legacy_group_history_source_invalid", "group history could not be preserved completely")
             selected = next((item for item in data.group_networks
                 if item["source_group_id"] == arguments["source_group_id"]), None)
             if arguments["import_group_network"] and selected is None:
@@ -232,6 +256,8 @@ class LegacyGroupDataWebAPI:
             network_result = None
             worldbook_result = None
             expression_result = None
+            history_result = None
+            admission_result = None
             # Both destinations share the V2 SQLite runtime. Compose their
             # repository writes so a failure cannot leave a partial mapping.
             with controller.runtime.transaction():
@@ -243,6 +269,10 @@ class LegacyGroupDataWebAPI:
                 current_data = build_data_plan(root, source_persona_id=arguments["source_persona_id"])
                 if current_data.source_fingerprint != current_plan["source_fingerprint"]:
                     raise TaskError("legacy_plan_stale", "V1 source changed during import; preview again.")
+                history = build_group_history_plan(root, source_persona_id=arguments["source_persona_id"],
+                                                  source_group_id=arguments["source_group_id"])
+                if history.source_fingerprint != current_plan["group_history"]["fingerprint"]:
+                    raise TaskError("legacy_plan_stale", "V1 group history changed during import; preview again.")
                 current_selected = next((item for item in current_data.group_networks
                     if item["source_group_id"] == arguments["source_group_id"]), None)
                 if arguments["import_group_network"] and current_selected is None:
@@ -262,6 +292,13 @@ class LegacyGroupDataWebAPI:
                             "the selected V2 group already has a knowledge source with another owner.")
                     existing_group_source = current_group_source
                 if arguments["import_group_network"]:
+                    from .legacy_api import LegacyMigrationWebAPI
+                    configuration, _ = LegacyMigrationWebAPI(controller)._read_v1_host_configuration()
+                    admission = build_admission_import(root, source_persona_id=arguments["source_persona_id"],
+                        source_group_id=arguments["source_group_id"], configuration=configuration)
+                    if admission["fingerprint"] != current_plan["group_admission"]["fingerprint"]:
+                        raise TaskError("legacy_plan_stale", "group admission inputs changed during import")
+                    admission_result = import_admission(controller.runtime, admission, self._scope_context(target))
                     selected = current_selected
                     network_result = session.application.messages.group_network.import_legacy_aggregate(
                         self._scope_context(target),
@@ -299,10 +336,20 @@ class LegacyGroupDataWebAPI:
                                                arguments["source_group_id"])
                     expression_result = import_profile(controller.runtime, profile, context,
                         controller.now(), expected_token=current_plan["group_expression"]["token"])
+            if arguments["import_group_network"]:
+                # Historical material uses its own database. A failed projection
+                # is reported and can be retried; it never completes the mapping.
+                history_result = import_group_history(session.application.memory.query.legacy,
+                    history, {"installation_id": controller.runtime.installation_id,
+                        "bot_id": target.bot_id, "role_id": self.role_id, "actor_id": "",
+                        "scope_kind": "group", "native_scope_id": target.group_id,
+                        "platform": target.platform_id, "account_id": target.account_id})
             return outcome_response(Outcome.success({"source_persona_id": arguments["source_persona_id"],
                 "source_group_id": arguments["source_group_id"], "target_id": target.target_id,
                 "role_id": self.role_id, "group_network": network_result,
                 "group_worldbook": worldbook_result, "group_expression": expression_result,
+                "group_history": history_result,
+                "group_admission": admission_result,
                 "idempotent": True}))
         except TaskError as error:
             return outcome_response(Outcome.failed(error.code, str(error)))
