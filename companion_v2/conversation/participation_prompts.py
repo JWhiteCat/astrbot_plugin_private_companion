@@ -166,9 +166,13 @@ def group_hints(request, context, settings, recent, reply_batches, *, native=Fal
                 "收口是参与倾向，不是硬性禁言；没有明确对象的新问题不要仅因问号而抢答。")
     if air["group_high_intensity_enabled"]:
         closeout = group_high_intensity.state(
-            rounds, at, window_seconds=air["group_air_guard_window_seconds"],
+            rounds,
+            at,
+            window_seconds=air["group_high_intensity_window_seconds"]
+            or air["group_air_guard_window_seconds"],
             threshold=max(2, air["group_air_guard_max_bot_replies"]),
-            cooldown_seconds=air["group_air_guard_cooldown_seconds"])
+            cooldown_seconds=air["group_air_guard_cooldown_seconds"],
+        )
         if closeout["active"]:
             instruction += (f"\n高强度收口已生效（窗口内 {closeout['recent_wakeups']} 轮，"
                 f"阈值 {closeout['threshold']}，剩余约 {closeout['remaining_seconds']} 秒）："

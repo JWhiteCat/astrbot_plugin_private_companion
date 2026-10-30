@@ -277,7 +277,7 @@ def _source_value(config: dict, source: str):
         return True, nested
     if source in config:
         return True, config[source]
-    if len(parts) == 2 and parts[0] == "weather_config" and parts[1] in config:
+    if len(parts) == 2 and parts[1] in config:
         return True, config[parts[1]]
     return False, None
 
@@ -290,7 +290,8 @@ def _source_precedence_conflict(config: dict, source: str) -> bool:
         if not isinstance(nested, dict) or part not in nested:
             return False
         nested = nested[part]
-    return source in config and nested != config[source]
+    alias = source if source in config else parts[-1]
+    return alias in config and nested != config[alias]
 
 
 def _boolean(value):
@@ -497,7 +498,6 @@ def _append_model_perception_modalities(config, registry, candidates, difference
 def _contract_value(rule: dict, value: object):
     contract = rule["contract"]
     transform = rule["transform"]
-    source_type = rule["source_type"].lower()
 
     if transform == "voice_generation_mode":
         aliases = {name: "model_tag" for name in (
@@ -671,11 +671,15 @@ def _convert_contract_configuration(config, rules, *, label: str, window_kind=No
         distinct = {json.dumps(value, ensure_ascii=False, sort_keys=True) for _, value in values}
         source_keys = tuple(rule["source"] for rule, _ in values)
         if len(distinct) != 1:
-            differences.append(ConfigurationDifference(
-                target, "conflict",
-                f"多个 V1 配置项指向同一 V2{label}字段且值不同；为避免静默覆盖，该字段未迁移。来源："
-                + "、".join(source_keys),
-            ))
+            differences.append(
+                ConfigurationDifference(
+                    target,
+                    "conflict",
+                    f"多个 V1 配置项指向同一 V2{label}字段且值不同；为避免静默覆盖，该字段未迁移。来源："
+                    + "、".join(source_keys),
+                    "、".join(source_keys),
+                )
+            )
             continue
         changes[target] = values[0][1]
         confidence[target] = "medium" if any(rule["confidence"] == "medium" for rule, _ in values) else "high"
@@ -698,6 +702,9 @@ def convert_plugin_configuration(config, *, rules=None, window_kind=None) -> Con
     source_rules = plugin_configuration_rules() if rules is None else rules
     selection_differences = ()
     if rules is None:
+        from .model_configuration import expand_quick_model_configuration
+
+        config = expand_quick_model_configuration(config)
         from .reply_configuration import select_plugin_rules
         source_rules, selection_differences = select_plugin_rules(config, source_rules)
     if window_kind is not None:
@@ -733,6 +740,9 @@ def convert_semantic_configuration(config, *, rules=None) -> ConfigurationMigrat
     source_rules = semantic_configuration_rules() if rules is None else rules
     differences = ()
     if rules is None:
+        from .model_configuration import expand_quick_model_configuration
+
+        config = expand_quick_model_configuration(config)
         from .configuration_precedence import select_semantic_rules
         source_rules, differences = select_semantic_rules(config, source_rules)
     migration = _convert_contract_configuration(config, source_rules, label="语义")
@@ -1063,6 +1073,11 @@ def convert_configuration(config, *, registry, rules=None, window_kind=None) -> 
     if window_kind not in (None, "private", "group"):
         raise ValueError("window kind must be private or group")
 
+    if rules is None:
+        from .model_configuration import expand_quick_model_configuration
+
+        config = expand_quick_model_configuration(config)
+
     differences = []
     candidates: dict[str, list[tuple[dict, object]]] = {}
     source_rules = configuration_rules() if rules is None else rules
@@ -1209,11 +1224,15 @@ def convert_configuration(config, *, registry, rules=None, window_kind=None) -> 
         distinct = {json.dumps(value, ensure_ascii=False, sort_keys=True) for _, value in values}
         source_keys = tuple(rule["source"] for rule, _ in values)
         if len(distinct) != 1:
-            differences.append(ConfigurationDifference(
-                target, "conflict",
-                "多个 V1 配置项指向同一 V2 字段且值不同；为避免静默覆盖，该字段未迁移。来源："
-                + "、".join(source_keys),
-            ))
+            differences.append(
+                ConfigurationDifference(
+                    target,
+                    "conflict",
+                    "多个 V1 配置项指向同一 V2 字段且值不同；为避免静默覆盖，该字段未迁移。来源："
+                    + "、".join(source_keys),
+                    "、".join(source_keys),
+                )
+            )
             continue
         _, converted = values[0]
         changes[target] = converted
@@ -1246,15 +1265,20 @@ def _legacy_account_ids(config, source, differences):
         elif type(item) is int:
             invalid += 1
             continue
-        elif type(item) is str and item.strip() and len(item.strip()) <= 32:
+        elif type(item) is str and item.strip() and len(item.strip()) <= 128:
             text = item.strip()
         else:
             invalid += 1
             continue
-        if not text.isascii() or not text.isdecimal() or int(text) <= 0:
+        _, platform_kind = _source_value(config, "basic_config.target_platform")
+        official = platform_kind in ("qq_official", "qq_official_webhook")
+        if official and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", text):
+            canonical = text
+        elif not text.isascii() or not text.isdecimal() or int(text) <= 0:
             invalid += 1
             continue
-        canonical = str(int(text))
+        else:
+            canonical = str(int(text))
         if canonical not in values:
             values.append(canonical)
     if invalid:
@@ -1332,7 +1356,9 @@ def _legacy_persona_ids(config, source, differences):
 
 
 def _legacy_account_inventory(accounts):
-    """Accept only the host's connected OneBot accounts and their role mappings."""
+    """Validate connected native accounts and their verified persona mappings."""
+    from companion_v2.adapters.astrbot.native import route_id
+
     result = []
     seen = set()
     for item in accounts or ():
@@ -1341,11 +1367,18 @@ def _legacy_account_inventory(accounts):
         platform_id = item.get("platform_id")
         account_id = item.get("account_id")
         bot_id = item.get("bot_id")
-        if (type(platform_id) is not str or not platform_id.strip()
-                or type(account_id) is not str or not account_id.isascii()
-                or not account_id.isdecimal() or len(account_id) > 32 or int(account_id) <= 0
-                or account_id != str(int(account_id))
-                or type(bot_id) is not str or not bot_id.strip()):
+        if (
+            type(platform_id) is not str
+            or not platform_id.strip()
+            or type(account_id) is not str
+            or account_id == "*"
+            or type(bot_id) is not str
+            or not bot_id.strip()
+        ):
+            continue
+        try:
+            route_id(account_id)
+        except ValueError:
             continue
         key = platform_id, account_id
         if key in seen:
@@ -1374,11 +1407,18 @@ def _legacy_account_inventory(accounts):
                     continue
                 kind, peer, persona = (window.get(field) for field in
                                        ("scope_kind", "native_scope_id", "persona_id"))
-                if (kind not in ("private", "group") or type(peer) is not str
-                        or len(peer) > 32 or not peer.isascii() or not peer.isdecimal() or int(peer) <= 0
-                        or peer != str(int(peer)) or type(persona) is not str
-                        or not persona.strip() or len(persona) > 120
-                        or any(ord(char) < 32 for char in persona)):
+                if (
+                    kind not in ("private", "group")
+                    or type(peer) is not str
+                    or type(persona) is not str
+                    or not persona.strip()
+                    or len(persona) > 120
+                    or any(ord(char) < 32 for char in persona)
+                ):
+                    continue
+                try:
+                    route_id(peer)
+                except ValueError:
                     continue
                 record = {"scope_kind": kind, "native_scope_id": peer, "persona_id": persona.strip()}
                 origin = window.get("unified_msg_origin")
@@ -1386,11 +1426,22 @@ def _legacy_account_inventory(accounts):
                     prefix = platform_id.strip() + (":FriendMessage:" if kind == "private" else ":GroupMessage:")
                     if type(origin) is not str or not origin.startswith(prefix):
                         continue
-                    ids = origin[len(prefix):].split("_")
-                    if (len(ids) not in ((1,) if kind == "private" else (1, 2)) or ids[-1] != peer
-                            or any(len(value) > 32 or not value.isascii() or not value.isdecimal()
-                                   or int(value) <= 0 or value != str(int(value)) for value in ids)):
-                        continue
+                    session_id = origin[len(prefix) :]
+                    if session_id != peer:
+                        ids = session_id.split("_")
+                        if (
+                            kind != "group"
+                            or len(ids) != 2
+                            or ids[-1] != peer
+                            or any(
+                                not value.isascii()
+                                or not value.isdecimal()
+                                or int(value) <= 0
+                                or value != str(int(value))
+                                for value in ids
+                            )
+                        ):
+                            continue
                     record["unified_msg_origin"] = origin
                 account["native_windows"].append(record)
         result.append(account)
@@ -1551,7 +1602,34 @@ def _legacy_target_scope(config, accounts):
         if require_group:
             access_present = True
             access_mode = "whitelist" if require_value else "blacklist"
-    if group_ids and access_present and access_mode.lower() not in ("whitelist", "allowlist"):
+    if (
+        group_enabled
+        and access_present
+        and access_mode.lower() in ("blacklist", "denylist")
+    ):
+        blacklist_present, blacklist = _source_value(
+            config, "group_observation_config.group_blacklist_ids"
+        )
+        if blacklist_present and type(blacklist) is list and not blacklist:
+            # The existing wildcard target authenticates every newly observed
+            # group against this account and its current native persona.
+            group_ids = ["*"]
+            group_source = "group_observation_config.group_access_mode"
+        else:
+            differences.append(
+                ConfigurationDifference(
+                    "multi_host.group_targets",
+                    "unsupported_mode",
+                    "A nonempty or unverified legacy blacklist requires an explicit exclusion policy.",
+                    "group_observation_config.group_blacklist_ids",
+                )
+            )
+            group_ids = []
+    elif (
+        group_ids
+        and access_present
+        and access_mode.lower() not in ("whitelist", "allowlist")
+    ):
         differences.append(ConfigurationDifference(
             "multi_host.group_targets", "unsupported_mode",
             "V1 群准入不是白名单模式，V2 无法把它等价转换为明确群目标；群列表已跳过。",
@@ -1655,8 +1733,14 @@ def convert_account_configuration(config, *, accounts=()) -> ConfigurationMigrat
         account_key = account["platform_id"], account["account_id"]
         role_map = account["persona_roles"]
         native_windows = account.get("native_windows")
-        authorized_windows = [row for row in native_windows or ()
-            if row["native_scope_id"] in (private_ids if row["scope_kind"] == "private" else group_ids)]
+        authorized_windows = [
+            row
+            for row in native_windows or ()
+            if row["native_scope_id"]
+            in (private_ids if row["scope_kind"] == "private" else group_ids)
+            or row["scope_kind"] == "group"
+            and "*" in group_ids
+        ]
         requested_personas = list(effective_personas)
         if native_windows is not None and not multi_enabled:
             # V1 single-role storage followed each window's native persona. A
@@ -1704,6 +1788,10 @@ def convert_account_configuration(config, *, accounts=()) -> ConfigurationMigrat
         def window_available(kind, peer):
             if native_windows is None:
                 return True
+            if kind == "group" and peer == "*":
+                # Runtime capture still resolves the persona for each real
+                # group. A verified default permits future groups to enter.
+                return account.get("default_persona_id") in mapped_personas
             windows = [row for row in authorized_windows
                        if row["scope_kind"] == kind and row["native_scope_id"] == peer]
             if windows and all(row["persona_id"] in mapped_personas for row in windows):

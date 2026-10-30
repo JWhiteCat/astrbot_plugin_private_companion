@@ -210,7 +210,9 @@ class MemberEntry:
         self.entry_id = _text(entry_id, "entry_id", limit=256)
         self.name = (name or "").strip()[:120]
         self.aliases = _strings(aliases, "aliases", limit=120)
-        self.declared_account_ids = _strings(declared_account_ids, "declared_account_ids", limit=64)
+        self.declared_account_ids = _strings(declared_account_ids, "declared_account_ids", limit=512)
+        if any(len(value.strip()) > 512 for value in (declared_account_ids or ())):
+            raise ValueError("declared_account_ids must preserve complete bounded native identities")
         self.gender = (gender or "").strip()[:40]
         self.content = (content or "").strip()[:20000]
         if type(priority) is not int or isinstance(priority, bool):

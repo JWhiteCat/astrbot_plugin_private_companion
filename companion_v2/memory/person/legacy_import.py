@@ -3,6 +3,7 @@
 import json
 
 from companion_v2.execution.models import TaskError, encode, stamp
+from companion_v2.legacy.private_contacts import private_account_matches
 from .access import OWNER, card_id, owner_for_subject, resolve_subject
 from .models import KIND, empty_document
 from .service import UPSERT
@@ -11,7 +12,7 @@ from .service import UPSERT
 def contact_plan(runtime, context, profiles):
     ready, present, pending, excluded = [], [], [], []
     for profile in profiles:
-        if (profile["platform"], profile["account_id"]) != (context.scope.platform, context.scope.account_id):
+        if not private_account_matches(runtime, context, profile):
             excluded.append({"native_account_id": profile["native_account_id"], "reason": "different_account"})
             continue
         try:
@@ -41,7 +42,7 @@ def contact_plan(runtime, context, profiles):
 def import_contacts(runtime, context, profiles, at):
     plan = contact_plan(runtime, context, profiles)
     by_id = {item["native_account_id"]: item for item in profiles
-             if (item["platform"], item["account_id"]) == (context.scope.platform, context.scope.account_id)}
+             if private_account_matches(runtime, context, item)}
     created = 0
     with runtime.transaction() as connection:
         for entry in plan["samples"]:

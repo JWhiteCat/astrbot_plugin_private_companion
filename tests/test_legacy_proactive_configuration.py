@@ -1,6 +1,7 @@
 """Upgrade enabled people without turning the global default on for everyone."""
 
-from dataclasses import replace
+import tests.astrbot_data_root  # noqa: F401
+
 import hashlib
 import json
 from pathlib import Path
@@ -9,8 +10,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from companion_v2.configuration.models import ConfigLayer
-from companion_v2.legacy.migration import ConfigIntent, LegacyMigration
+from companion_v2.legacy.migration import LegacyMigration
 from companion_v2.legacy.proactive_configuration import (
     PRIVATE_RELATIONSHIP, PRIVATE_WINDOW, private_contact_configuration,
 )
@@ -174,6 +174,32 @@ class PrivateContactMigrationHostTests(ContactFixture, unittest.IsolatedAsyncioT
         self.profile.write_text(json.dumps(payload) + "\n", encoding="utf-8", newline="\n")
         second = self.api._prepare_intents(self.session, self.plan())[3]["private_contact_preferences"]
         self.assertNotEqual(first, second)
+
+    async def test_unbound_official_primary_requires_matching_frozen_persona_evidence(self):
+        from companion_v2.execution.models import digest
+
+        await self.ready()
+        payload = json.loads(self.profile.read_text(encoding="utf-8"))
+        payload["primary_store_ownership"]["owner_persona_id"] = ""
+        user = next(iter(payload["users"].values()))
+        user["identity_platform_kind"] = "qq_official"
+        user["proactive_daily_limit"] = 30
+        self.profile.write_text(json.dumps(payload), encoding="utf-8")
+        self.assertFalse(any(intent.target_kind in (PRIVATE_RELATIONSHIP, PRIVATE_WINDOW)
+                             for intent in self.plan().intents))
+        evidence = {"schema": 1, "source_config_digest": digest(self.migration._configuration()),
+            "persona_id": "original", "platform_id": self.context.scope.platform}
+        with self.runtime.transaction() as connection:
+            connection.execute("INSERT INTO runtime_metadata(key, value) VALUES (?, ?)",
+                ("legacy_primary_persona_evidence", json.dumps(evidence)))
+        personal = [intent for intent in self.plan().intents if intent.target_kind == PRIVATE_WINDOW]
+        self.assertEqual(personal[0].changes, {"max_contacts_24h": 30})
+        evidence["source_config_digest"] = "stale"
+        with self.runtime.transaction() as connection:
+            connection.execute("UPDATE runtime_metadata SET value = ? WHERE key = ?",
+                (json.dumps(evidence), "legacy_primary_persona_evidence"))
+        self.assertFalse(any(intent.target_kind in (PRIVATE_RELATIONSHIP, PRIVATE_WINDOW)
+                             for intent in self.plan().intents))
 
 
 if __name__ == "__main__":

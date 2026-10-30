@@ -4,6 +4,7 @@ import json
 
 from companion_v2.execution.models import TaskError, digest, encode, require, stamp
 from companion_v2.foundation.refs import ScopeKind, SubjectKind, SubjectRef
+from companion_v2.legacy.private_contacts import private_account_matches
 from .grants import PERSON_PERMISSION_GRANT_PREFIX
 from .models import AuthorizationTier, GrantState
 from .object_access import ObjectAccessPolicy
@@ -69,7 +70,7 @@ def authorization_plan(runtime, context, profiles, at):
         source = profile.get("authorization", {})
         if not source.get("tier") and not source.get("permissions"):
             continue
-        if (profile["platform"], profile["account_id"]) != (context.scope.platform, context.scope.account_id):
+        if not private_account_matches(runtime, context, profile):
             continue
         native_id = profile["native_account_id"]
         try:

@@ -12,7 +12,7 @@ the record still appears with an ``issues`` entry so the migration preview can
 say "needs confirmation" instead of guessing a subject.
 """
 
-from .private_contacts import GENERIC_NAMES, verified_private_identity
+from .private_contacts import GENERIC_NAMES, private_umo, verified_private_identity
 
 
 SOURCE_ID = "private.core_profiles.users"
@@ -125,6 +125,7 @@ def relationship_profiles(payload):
         platform, account, participant = identity
         item = _item(str(key), values, source_fields, warnings)
         item.update({"platform": platform, "account_id": account,
+                     "platform_kind": user["identity_platform_kind"], "private_umo": private_umo(user),
                      "native_account_id": participant})
         previous = by_identity.get(identity)
         if previous is None:

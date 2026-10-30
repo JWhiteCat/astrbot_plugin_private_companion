@@ -42,6 +42,23 @@ def select_registry_rules(config, rules):
     selected, differences = [], []
     for rule in rules:
         source = rule["source"]
+        if (
+            source == "schedule_detail_config.enable_detail_enhancement"
+            and _source_value(config, "humanized_state_config.enable_humanized_states")[
+                0
+            ]
+        ):
+            present, value = _source_value(config, source)
+            if present:
+                differences.append(
+                    ConfigurationDifference(
+                        "role.state.enabled",
+                        "inactive_source" if value is False else "partial_mapping",
+                        "旧生活细节开关不覆盖独立的人性化状态总开关；细节增强需单独核对。",
+                        source,
+                    )
+                )
+            continue
         if source == "basic_config.default_proactive_daily_limit":
             # New-profile defaults are not a decision-attempt budget. Individual
             # legacy quotas come from the verified user's profile instead.

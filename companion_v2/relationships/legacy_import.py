@@ -21,6 +21,7 @@ from companion_v2.configuration.models import (
 from companion_v2.execution.models import TaskError
 from companion_v2.foundation.refs import SubjectKind, SubjectRef
 from companion_v2.memory.person.access import resolve_subject
+from companion_v2.legacy.private_contacts import private_account_matches
 
 from .profile import (
     FIELD_LIMITS,
@@ -121,7 +122,7 @@ def relationship_profile_entries(runtime, context, profiles, *, seed=None):
         if issue:
             entry["reason"] = issue
             continue
-        if (profile.get("platform"), profile.get("account_id")) != (scope.platform, scope.account_id):
+        if not private_account_matches(runtime, context, profile):
             entry["reason"] = "different_account"
             continue
         try:

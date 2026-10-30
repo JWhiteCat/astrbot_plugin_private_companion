@@ -81,13 +81,15 @@ CONFIG_DEFAULTS = {
     "enable_group_behavior_feedback": True,
     "group_behavior_guidance": "",
 }
-CONFIG_LIMITS = {"group_topic_thread_max": (3, 40),
-                 "group_interject_min_interval_minutes": (0, 1440),
-                 "group_interject_max_daily": (0, 20),
-                 "group_interject_feedback_window_seconds": (60, 86400),
-                 "group_repeat_trigger_threshold": (3, 20),
-                 "group_repeat_window_seconds": (10, 600),
-                 "group_context_max_age_hours": (1, 168)}
+CONFIG_LIMITS = {
+    "group_topic_thread_max": (3, 40),
+    "group_interject_min_interval_minutes": (0, 1440),
+    "group_interject_max_daily": (0, 2147483647),
+    "group_interject_feedback_window_seconds": (60, 86400),
+    "group_repeat_trigger_threshold": (3, 20),
+    "group_repeat_window_seconds": (10, 600),
+    "group_context_max_age_hours": (1, 168),
+}
 CONFIG_SWITCHES = tuple(key for key, value in CONFIG_DEFAULTS.items() if type(value) is bool)
 CONFIG_COUNTS = tuple(key for key, value in CONFIG_DEFAULTS.items() if type(value) is int)
 CONFIG_PROBABILITIES = tuple(key for key, value in CONFIG_DEFAULTS.items() if type(value) is float)
@@ -275,9 +277,8 @@ class GroupParticipation:
     def high_intensity_state(self, context, instruction, *, at, settings):
         """Read the opt-in hard closeout from confirmed role turns.
 
-        The window/threshold/cooldown live in the air-guard group so V2 does not
-        grow a second set of near-identical settings.  No merge queue is kept
-        here: the ordinary group turn path still owns message batching.
+        A migrated V1 window remains independent from its air-guard window.
+        Zero keeps the existing V2 shared-window default.
         """
         air = group_air_settings(settings)
         if not air["group_high_intensity_enabled"]:
@@ -289,8 +290,10 @@ class GroupParticipation:
         rounds = [when for turn in turns
                   if (when := parse_moment(turn.get("returned_at"))) is not None]
         return group_high_intensity.state(
-            rounds, at,
-            window_seconds=air["group_air_guard_window_seconds"],
+            rounds,
+            at,
+            window_seconds=air["group_high_intensity_window_seconds"]
+            or air["group_air_guard_window_seconds"],
             threshold=max(2, air["group_air_guard_max_bot_replies"]),
             cooldown_seconds=air["group_air_guard_cooldown_seconds"],
         )
@@ -601,7 +604,7 @@ class GroupParticipation:
         bounded reason the model itself wrote, and how long the turn took.
         """
         try:
-            reason = self._silence_reason(context, batch_id)
+            self._silence_reason(context, batch_id)
             at = self.tasks.now()
             started_at = datetime.fromisoformat(batch["created_at"])
             InboundNoReplyLedger(self.runtime).emit(

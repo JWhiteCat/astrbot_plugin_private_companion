@@ -38,13 +38,22 @@ IMAGE_POSITIONS = frozenset(("after_text", "before_text"))
 VOICE_FIELDS = tuple(key for key in asdict(VoiceReplyPolicy())
                      if key not in ("private_probability", "group_probability",
                                     "private_cooldown_seconds", "group_cooldown_seconds"))
-GROUP_AIR_DEFAULTS = {"group_air_guard_enabled": True, "group_air_guard_window_seconds": 60,
-                      "group_air_guard_max_bot_replies": 3, "group_air_guard_cooldown_seconds": 150,
-                      "group_air_guard_polite_loop_limit": 2, "group_high_intensity_enabled": False}
-GROUP_AIR_LIMITS = {"group_air_guard_window_seconds": (30, 1800),
-                    "group_air_guard_max_bot_replies": (1, 20),
-                    "group_air_guard_cooldown_seconds": (0, 1800),
-                    "group_air_guard_polite_loop_limit": (1, 10)}
+GROUP_AIR_DEFAULTS = {
+    "group_air_guard_enabled": True,
+    "group_air_guard_window_seconds": 60,
+    "group_air_guard_max_bot_replies": 3,
+    "group_air_guard_cooldown_seconds": 150,
+    "group_air_guard_polite_loop_limit": 2,
+    "group_high_intensity_enabled": False,
+    "group_high_intensity_window_seconds": 0,
+}
+GROUP_AIR_LIMITS = {
+    "group_air_guard_window_seconds": (30, 1800),
+    "group_high_intensity_window_seconds": (0, 1800),
+    "group_air_guard_max_bot_replies": (1, 20),
+    "group_air_guard_cooldown_seconds": (0, 1800),
+    "group_air_guard_polite_loop_limit": (1, 10),
+}
 GROUP_CONTINUATION_DEFAULTS = {"group_conversation_followup_enabled": True,
                                "group_conversation_followup_seconds": 120,
                                "group_conversation_followup_max_turns": 3}
@@ -53,25 +62,42 @@ GROUP_CONTINUATION_LIMITS = {"group_conversation_followup_seconds": (15, 1800),
 GROUP_WAKEUP_LEGACY_FIELDS = frozenset(("group_wakeup_enabled", "group_wakeup_direct_words",
                                         "group_wakeup_context_words", "group_wakeup_interest_keywords",
                                         "group_wakeup_question_enabled"))
-GROUP_WAKEUP_DEFAULTS = {"group_wakeup_enabled": True, "group_wakeup_direct_words": "[]",
-                         "group_wakeup_context_words": "[]",
-                         "group_wakeup_interest_keywords": "[]", "group_wakeup_question_enabled": False,
-                         "group_wakeup_bot_name": "", "group_wakeup_primary_member_ids": "[]",
-                         "group_wakeup_owner_direct_words": "[]",
-                         "group_wakeup_interest_probability": 0.18, "group_wakeup_question_threshold": 65,
-                         "group_wakeup_cold_group_enabled": False, "group_wakeup_cold_group_threshold": 65,
-                         "group_wakeup_cold_group_idle_minutes": 25, "group_wakeup_cooldown_seconds": 90,
-                         "group_wakeup_fatigue_limit": 5, "group_wakeup_fatigue_decay_minutes": 90,
-                         "group_wakeup_bot_name_enabled": True,
-                         "group_wakeup_generated_keyword_limit": 24,
-                         "group_wakeup_topic_interest_max_boost": 45,
-                         "group_wakeup_debounce_pending_penalty": 65,
-                         "group_wakeup_image_enabled": False,
-                         "group_wakeup_image_weight": 0.2,
-                         "group_wakeup_short_text_wait_ms": 15000, "group_wakeup_log_limit": 80}
-GROUP_WAKEUP_ADDED_FIELDS = frozenset(("group_wakeup_bot_name_enabled",
-    "group_wakeup_generated_keyword_limit", "group_wakeup_topic_interest_max_boost",
-    "group_wakeup_debounce_pending_penalty"))
+GROUP_WAKEUP_DEFAULTS = {
+    "group_wakeup_enabled": True,
+    "group_wakeup_direct_words": "[]",
+    "group_wakeup_legacy_targeting": False,
+    "group_wakeup_context_words": "[]",
+    "group_wakeup_interest_keywords": "[]",
+    "group_wakeup_question_enabled": False,
+    "group_wakeup_bot_name": "",
+    "group_wakeup_primary_member_ids": "[]",
+    "group_wakeup_owner_direct_words": "[]",
+    "group_wakeup_interest_probability": 0.18,
+    "group_wakeup_question_threshold": 65,
+    "group_wakeup_cold_group_enabled": False,
+    "group_wakeup_cold_group_threshold": 65,
+    "group_wakeup_cold_group_idle_minutes": 25,
+    "group_wakeup_cooldown_seconds": 90,
+    "group_wakeup_fatigue_limit": 5,
+    "group_wakeup_fatigue_decay_minutes": 90,
+    "group_wakeup_bot_name_enabled": True,
+    "group_wakeup_generated_keyword_limit": 24,
+    "group_wakeup_topic_interest_max_boost": 45,
+    "group_wakeup_debounce_pending_penalty": 65,
+    "group_wakeup_image_enabled": False,
+    "group_wakeup_image_weight": 0.2,
+    "group_wakeup_short_text_wait_ms": 15000,
+    "group_wakeup_log_limit": 80,
+}
+GROUP_WAKEUP_ADDED_FIELDS = frozenset(
+    (
+        "group_wakeup_bot_name_enabled",
+        "group_wakeup_legacy_targeting",
+        "group_wakeup_generated_keyword_limit",
+        "group_wakeup_topic_interest_max_boost",
+        "group_wakeup_debounce_pending_penalty",
+    )
+)
 GROUP_WAKEUP_TIMING_FIELDS = frozenset(("group_wakeup_short_text_wait_ms", "group_wakeup_log_limit"))
 GROUP_WAKEUP_PROMPT_FIELDS = frozenset(GROUP_WAKEUP_DEFAULTS) - GROUP_WAKEUP_TIMING_FIELDS
 GROUP_WAKEUP_PREVIOUS_FIELDS = GROUP_WAKEUP_PROMPT_FIELDS - GROUP_WAKEUP_ADDED_FIELDS
@@ -249,9 +275,17 @@ def private_debounce_settings(values):
 
 def group_wakeup_settings(values):
     settings = {key: values.get(key, default) for key, default in GROUP_WAKEUP_DEFAULTS.items()}
-    if any(type(settings[key]) is not bool for key in ("group_wakeup_enabled", "group_wakeup_question_enabled",
-                                                    "group_wakeup_cold_group_enabled", "group_wakeup_bot_name_enabled",
-                                                    "group_wakeup_image_enabled")):
+    if any(
+        type(settings[key]) is not bool
+        for key in (
+            "group_wakeup_enabled",
+            "group_wakeup_question_enabled",
+            "group_wakeup_cold_group_enabled",
+            "group_wakeup_bot_name_enabled",
+            "group_wakeup_image_enabled",
+            "group_wakeup_legacy_targeting",
+        )
+    ):
         raise ConfigurationError("reply_configuration_invalid", "group wakeup switches must be boolean")
     for key in GROUP_WAKEUP_WORD_FIELDS:
         raw = settings[key]

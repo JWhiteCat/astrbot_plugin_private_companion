@@ -2225,7 +2225,7 @@
     {
       "source": "group_high_intensity_config.group_high_intensity_wakeup_window_seconds",
       "source_type": "int",
-      "target": "conversation.presentation.group_air_guard_window_seconds",
+      "target": "conversation.presentation.group_high_intensity_window_seconds",
       "confidence": "high"
     },
     {
@@ -2238,6 +2238,36 @@
       "source": "group_high_intensity_config.group_high_intensity_cooldown_seconds",
       "source_type": "int",
       "target": "conversation.presentation.group_air_guard_cooldown_seconds",
+      "confidence": "high"
+    },
+    {
+      "source": "private_followup_config.enable_group_conversation_followup",
+      "source_type": "bool",
+      "target": "conversation.presentation.group_conversation_followup_enabled",
+      "confidence": "high"
+    },
+    {
+      "source": "private_followup_config.group_conversation_followup_seconds",
+      "source_type": "int",
+      "target": "conversation.presentation.group_conversation_followup_seconds",
+      "confidence": "high"
+    },
+    {
+      "source": "private_followup_config.group_conversation_followup_max_turns",
+      "source_type": "int",
+      "target": "conversation.presentation.group_conversation_followup_max_turns",
+      "confidence": "high"
+    },
+    {
+      "source": "group_wakeup_config.enable_group_wakeup_enhancement",
+      "source_type": "bool",
+      "target": "conversation.presentation.group_wakeup_legacy_targeting",
+      "confidence": "high"
+    },
+    {
+      "source": "news_config.news_share_probability",
+      "source_type": "float",
+      "target": "proactive.contact.news_share_probability",
       "confidence": "high"
     }
   ],

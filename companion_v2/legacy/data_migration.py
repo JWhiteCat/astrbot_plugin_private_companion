@@ -916,7 +916,7 @@ def _worldbook_items(payload):
             if not item.scope:
                 rejected.append({"index": index, "reason": "member_scope_missing"})
                 continue
-            if any(not re.fullmatch(r"[0-9]{1,64}", value) for value in item.scope):
+            if any(not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", value) for value in item.scope):
                 rejected.append({"index": index, "reason": "member_scope_unmapped"})
                 continue
             member_ids = tuple(dict.fromkeys(item.scope))
@@ -1024,7 +1024,10 @@ def _member_profiles(payload):
         if not isinstance(raw, dict):
             rejected.append({"index": index, "reason": "member_profile_invalid"})
             continue
-        user_id = _clean(raw.get("user_id") or key, 64)
+        user_id = str(raw.get("user_id") or key).strip()
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", user_id):
+            rejected.append({"index": index, "reason": "member_identity_invalid"})
+            continue
         if not user_id or user_id in deleted:
             rejected.append({"index": index, "reason": "member_profile_deleted_or_unidentified"})
             continue
@@ -1066,7 +1069,7 @@ def _member_profiles(payload):
         if total_bytes + size > MAX_WORLDBOOK_BATCH_BYTES:
             rejected.append({"index": index, "reason": "worldbook_batch_bytes_limit"})
             continue
-        account_ids = (user_id,) if re.fullmatch(r"[0-9]{1,64}", user_id) else ()
+        account_ids = (user_id,)
         gender = _clean(raw.get("gender"), 40)
         priority = raw.get("priority", 100)
         if type(priority) is not int:

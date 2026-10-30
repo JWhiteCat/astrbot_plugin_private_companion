@@ -8,7 +8,6 @@ from contextlib import closing
 from pathlib import Path
 import unittest
 
-from companion_v2.configuration.models import ConfigLayer
 from companion_v2.configuration.registry import FieldDefinition, FieldRegistry, ValueKind
 from companion_v2.legacy.configuration_migration import (
     configuration_audit_sources,
@@ -69,10 +68,19 @@ class RuleTableTests(unittest.TestCase):
     def test_generated_table_covers_the_audited_registry_mappings(self):
         rules = configuration_rules()
 
-        self.assertEqual(len(rules), 371)
-        self.assertEqual(sum(item["confidence"] == "high" for item in rules), 304)
+        self.assertEqual(len(rules), 376)
+        self.assertEqual(sum(item["confidence"] == "high" for item in rules), 309)
         self.assertEqual(sum(item["confidence"] == "medium" for item in rules), 67)
-        self.assertEqual(len({item["source"] for item in rules}), len(rules))
+        self.assertEqual(len({(item["source"], item["target"]) for item in rules}), len(rules))
+        grouped_targets = {}
+        for item in rules:
+            grouped_targets.setdefault(item["source"], []).append(item["target"])
+        self.assertEqual({source: targets for source, targets in grouped_targets.items() if len(targets) > 1}, {
+            "group_wakeup_config.enable_group_wakeup_enhancement": [
+                "conversation.presentation.group_wakeup_enabled",
+                "conversation.presentation.group_wakeup_legacy_targeting",
+            ],
+        })
 
         expected = {row["v1_key"] for row in self._ledger_rows()
                     if row["resolved_kind"] == "registry"
@@ -89,7 +97,14 @@ class RuleTableTests(unittest.TestCase):
             "message_debounce_config.semantic_message_debounce_seconds",
             "message_debounce_config.text_message_debounce_max_wait_seconds",
         }
-        self.assertEqual({item["source"] for item in rules}, (expected | {f"humanized_state_config.advanced_cycle_{phase}_{suffix}"
+        equivalent_656 = {
+            "private_followup_config.enable_group_conversation_followup",
+            "private_followup_config.group_conversation_followup_seconds",
+            "private_followup_config.group_conversation_followup_max_turns",
+            "group_wakeup_config.enable_group_wakeup_enhancement",
+            "news_config.news_share_probability",
+        }
+        self.assertEqual({item["source"] for item in rules}, (expected | equivalent_656 | {f"humanized_state_config.advanced_cycle_{phase}_{suffix}"
                              for phase in ("follicular", "pre_ovulation", "ovulation", "luteal")
                              for suffix in ("days", "prompt", "mood", "energy")}) - specialized
                          - {"voice_action_config.tts_message_scope", "basic_config.owner_exclusive_proactive_limit"})

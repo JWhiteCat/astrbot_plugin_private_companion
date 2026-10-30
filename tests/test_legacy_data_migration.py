@@ -304,6 +304,18 @@ class LegacyDataMigrationTests(unittest.TestCase):
         self.assertEqual(preview["worldbook"]["selected_group_member_profile_count"], 1)
         self.assertNotIn("甲群成员线索", json.dumps(preview, ensure_ascii=False))
 
+    def test_qq_opaque_member_ids_and_group_ids_are_preserved_without_numeric_conversion(self):
+        participant, group = "OPEN_id-" + "a" * 72, "GROUP_open-id"
+        self.write_profile({"groups": {group: {"members": {participant: {"name": "群友", "count": 2}}}},
+            "worldbook_member_profiles": {participant: {"user_id": participant, "name": "群友",
+                "content": "该群成员公开线索", "projection_kind": "group_observation",
+                "group_observation_scope_ids": ["AstrBot:GroupMessage:" + group]}}})
+        plan = build_data_plan(self.root)
+        mapped = map_legacy_worldbook(plan, source_group_id=group, confirm_member_ids=True, include_group=True)
+        self.assertEqual(mapped[3][0].declared_account_ids, (participant,))
+        self.assertEqual(mapped[3][0].group_ids, (group,))
+        self.assertIn(participant, plan.group_networks[0]["members"])
+
     def test_host_import_writes_knowledge_with_role_and_group_scope_idempotently(self):
         from astrbot_host.legacy_api import LegacyMigrationWebAPI
 

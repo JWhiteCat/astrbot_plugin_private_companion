@@ -3,6 +3,7 @@
 import asyncio
 from datetime import datetime, timedelta
 import json
+import random
 
 from companion_v2.conversation.messages import source_from_document
 from companion_v2.execution.models import TaskContext, TaskError, digest, encode, require, stamp
@@ -335,20 +336,32 @@ class NewsContactEvents:
         source_enabled = (preferences.values["web_exploration_enabled"] if kind == "search" else
                           preferences.values["news_daily_hot_read_enabled"] if kind == "hot" else
                           preferences.values["news_share_enabled"])
-        if (port is None or context.scope.kind is not ScopeKind.PRIVATE
-                or not preferences.values["automatic_enabled"] or not source_enabled
-                or preferences.reason("news")):
+        if (
+            port is None
+            or context.scope.kind is not ScopeKind.PRIVATE
+            or not preferences.values["automatic_enabled"]
+            or not source_enabled
+            or preferences.values.get("news_share_probability", 1.0) <= 0
+            or preferences.reason("news")
+        ):
             return None
-        return digest([port.fingerprint, preferences.values["news_source_kind"],
-                       preferences.values["news_source_uid"], preferences.values["news_source_url"],
-                       preferences.values["news_check_interval_minutes"],
-                       preferences.values["web_exploration_min_interval_hours"],
-                       preferences.values["web_exploration_interests"],
-                       preferences.values["news_hot_sources"],
-                       preferences.values["external_event_self_link_enabled"],
-                       preferences.values["external_event_self_link_weight"],
-                       preferences.values["external_event_self_link_cooldown_hours"],
-                       preferences.snapshot.change_sequence])
+        return digest(
+            [
+                port.fingerprint,
+                preferences.values["news_source_kind"],
+                preferences.values["news_source_uid"],
+                preferences.values["news_source_url"],
+                preferences.values["news_check_interval_minutes"],
+                preferences.values["web_exploration_min_interval_hours"],
+                preferences.values["web_exploration_interests"],
+                preferences.values["news_hot_sources"],
+                preferences.values["external_event_self_link_enabled"],
+                preferences.values["external_event_self_link_weight"],
+                preferences.values["external_event_self_link_cooldown_hours"],
+                preferences.values.get("news_share_probability", 1.0),
+                preferences.snapshot.change_sequence,
+            ]
+        )
 
     @staticmethod
     def _poll_interval(preferences):
@@ -765,6 +778,11 @@ class NewsContactEvents:
                                  "published_at": stamp(published)}}
             if not self._self_link_cooled_down(context, preferences, at):
                 seen.append(key)
+                # Evaluate once per new article, never on each scheduler tick.
+                # Endpoints are exact, so a migrated 1.0 never suppresses news.
+                probability = preferences.values.get("news_share_probability", 1.0)
+                if probability < 1.0 and random.random() >= probability:
+                    event = None
             else:
                 event = None
         self._save(context, settings_hash, at, checked=True, seen=seen, event=event)

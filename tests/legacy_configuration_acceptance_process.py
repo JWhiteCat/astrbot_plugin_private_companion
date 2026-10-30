@@ -32,7 +32,8 @@ from companion_v2.legacy.migration import LegacyMigration
 from companion_v2.model_gateway.budget import effective_soft
 from astrbot_host.weather_settings import WeatherHostSettings, weather_settings
 from tests.multi_host_support import MultiNativeContext, multi_config
-from tests.native_adapter_support import FakeEvent, FakeProvider, FakeReverseApi
+from tests.native_adapter_support import FakeEvent, FakeReverseApi
+from tests.segmentation_stream_support import native_provider
 from tests.test_management_access import NOW
 from companion_v2.adapters.astrbot.staging import NativeAdapterTypes
 
@@ -119,7 +120,8 @@ async def run(v1_root: Path, v1_config_path: Path) -> dict:
     v1_config = json.loads(v1_config_path.read_text(encoding="utf-8-sig"))
     source_hash = _hash(v1_config_path)
     native = MultiNativeContext()
-    types = NativeAdapterTypes("4.27.2", FakeEvent, FakeProvider, SimpleNamespace,
+    native.provider = native_provider()
+    types = NativeAdapterTypes("4.27.2", FakeEvent, type(native.provider), SimpleNamespace,
                                SimpleNamespace, FakeReverseApi)
 
     with TemporaryDirectory(prefix="companion-v2-v1-config-acceptance-") as temporary:

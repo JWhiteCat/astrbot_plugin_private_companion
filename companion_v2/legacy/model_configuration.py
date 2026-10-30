@@ -1,6 +1,96 @@
 """Convert old route policies only onto registered V2 model task profiles."""
 
 import json
+from copy import deepcopy
+
+
+def expand_quick_model_configuration(config):
+    """Project V1 quick routes before registry, plugin, and semantic conversion.
+
+    Args:
+        config: Original grouped or flat V1 settings; never modified.
+
+    Returns:
+        A detached effective configuration, or the original non-quick input.
+    """
+    from .configuration_migration import (
+        _source_value,
+        configuration_rules,
+        plugin_configuration_rules,
+        semantic_configuration_rules,
+    )
+
+    if not isinstance(config, dict):
+        return config
+    present, mode = _source_value(
+        config, "model_assignment_config.provider_config_mode"
+    )
+    if not present or mode != "quick":
+        return config
+    values = {}
+    for key in (
+        "FAST_RESPONSE_PROVIDER_ID",
+        "COMPLEX_REASONING_PROVIDER_ID",
+        "CREATIVE_MODEL_PROVIDER_ID",
+    ):
+        _, raw = _source_value(config, "model_assignment_config." + key)
+        values[key] = raw.strip() if isinstance(raw, str) else ""
+    fast = values["FAST_RESPONSE_PROVIDER_ID"]
+    complex_model = values["COMPLEX_REASONING_PROVIDER_ID"]
+    creative = values["CREATIVE_MODEL_PROVIDER_ID"]
+    routes = {}
+    for key in (
+        "LLM_PROVIDER_ID",
+        "DAILY_PLAN_PROVIDER_ID",
+        "DETAIL_ENHANCEMENT_PROVIDER_ID",
+        "HISTORY_SUMMARY_PROVIDER_ID",
+        "RELATIONSHIP_ANALYSIS_PROVIDER_ID",
+        "COMPANION_MEMORY_PROVIDER_ID",
+        "DIALOGUE_EPISODE_PROVIDER_ID",
+        "GROUP_EPISODE_PROVIDER_ID",
+        "FORWARD_MESSAGE_PROVIDER_ID",
+        "PROACTIVE_PERSONA_JUDGE_PROVIDER_ID",
+        "TROUBLESHOOTING_PROVIDER_ID",
+        "DAILY_REVIEW_PROVIDER_ID",
+    ):
+        routes[key] = complex_model
+    for key in (
+        "MAI_STYLE_PROVIDER_ID",
+        "RESPONSE_REVIEW_PROVIDER_ID",
+        "SMART_SILENCE_PROVIDER_ID",
+        "EMOTION_JUDGEMENT_PROVIDER_ID",
+        "SMART_MESSAGE_DEBOUNCE_PROVIDER_ID",
+        "REST_WAKEUP_PROVIDER_ID",
+        "GROUP_INTERJECT_PROVIDER_ID",
+        "GROUP_SLANG_PROVIDER_ID",
+        "VOICE_PROMPT_PROVIDER_ID",
+        "tts_conversion_provider_id",
+        "NARRATION_PROVIDER_ID",
+        "NEWS_PROVIDER_ID",
+        "WEB_EXPLORATION_PROVIDER_ID",
+    ):
+        routes[key] = fast or complex_model
+    routes["GROUP_FOLLOWUP_JUDGE_PROVIDER_ID"] = fast
+    for key in (
+        "CREATIVE_PROVIDER_ID",
+        "CREATIVE_OUTLINE_PROVIDER_ID",
+        "CREATIVE_REVIEW_PROVIDER_ID",
+        "DREAM_DIARY_PROVIDER_ID",
+        "PHOTO_PROMPT_PROVIDER_ID",
+    ):
+        routes[key] = creative or complex_model
+    result = deepcopy(config)
+    result.update(routes)
+    result.setdefault("model_assignment_config", {}).update(routes)
+    for rule in (
+        *configuration_rules(),
+        *plugin_configuration_rules(),
+        *semantic_configuration_rules(),
+    ):
+        path = rule["source"].split(".")
+        if len(path) == 2 and path[-1] in routes:
+            result.setdefault(path[0], {})[path[-1]] = routes[path[-1]]
+    return result
 
 
 def append_model_configuration(config, registry, candidates, differences):

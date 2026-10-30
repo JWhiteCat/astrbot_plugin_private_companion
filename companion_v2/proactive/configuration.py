@@ -284,95 +284,198 @@ def configuration_fields():
     fields = tuple(ContactField(GROUP + "." + name, GROUP, GROUP,
         ValueKind.BOOLEAN if type(value) is bool else ValueKind.WEIGHT if type(value) is float else ValueKind.TEXT,
         value, layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP) for name, value in defaults.items())
-    return fields + (ContactField(GROUP + ".automatic_enabled", GROUP, GROUP, ValueKind.BOOLEAN,
-        False, layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP),) + tuple(
-        ContactField(GROUP + "." + name, GROUP, GROUP, ValueKind.INTEGER, default,
-            minimum=minimum, maximum=maximum,
-            layers=LAYERS,
-            apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP)
-        for name, default, minimum, maximum in (
-            ("interval_seconds", 3600, 60, 604800), ("idle_seconds", 900, 0, 86400),
-            ("unanswered_slowdown_start", 1, 1, 10), ("unanswered_pause_after", 0, 0, 50),
-            ("dedup_sent_window_minutes", 240, 0, 1440),
-            ("dedup_last_message_window_minutes", 240, 0, 1440),
-            ("dedup_weather_window_minutes", 1080, 0, 2880),
-            ("dedup_min_shared_tokens", 1, 1, 4),
-            ("event_max_age_seconds", 3600, 60, 86400),
-            ("max_contacts_24h", 3, 0, 100),
-            ("balance_check_interval_minutes", 60, 5, 1440),
-            ("news_check_interval_minutes", 180, 15, 1440),
-            ("web_exploration_min_interval_hours", 8, 1, 168),
-            ("web_exploration_result_count", 8, 1, 30),
-            ("news_hot_result_count", 10, 3, 30),
-            ("external_event_self_link_cooldown_hours", 12, 0, 168),
-            ("screen_glance_daily_limit", 1, 0, 20),
-            ("screen_glance_cooldown_minutes", 240, 0, 10080),
-            # V1 goodnight_screen_check_delay_minutes (1-180) and the unanswered
-            # peek window/cooldown (10-240 / 30-1440).
-            ("screen_glance_goodnight_delay_minutes", 45, 1, 180),
-            ("screen_glance_followup_after_minutes", 45, 10, 240),
-            ("screen_glance_followup_cooldown_minutes", 180, 30, 1440),
-            ("contact_followup_after_minutes", 45, 10, 1440),
-            ("contact_followup_cooldown_minutes", 180, 30, 2880),
-            ("balance_message_cooldown_hours", 24, 1, 168),
-            # C2-5: how many days ahead an upcoming anniversary may be noticed.
-            # 0 keeps the V1 behaviour exactly — same-day greeting only. Named after
-            # the V1 key so the ledger mapping stays one-to-one.
-            ("important_date_lookahead_days", 0, 0, 30),
-            # C2-5: how long after a meal checkin the role may follow up. The meal
-            # slot width was a hard-coded 45 minutes before this.
-            ("meal_care_followup_minutes", 45, 1, 240),
-            ("balance_low_threshold", 10, 0, 1000000000),
-            ("balance_critical_threshold", 3, 0, 1000000000),
-            ("balance_low_percent_threshold", 15, 0, 100),
-            ("balance_critical_percent_threshold", 5, 0, 100),
-            ("voice_action_max_chars", 30, 6, 80),
-            ("voice_action_cooldown_minutes", 60, 0, 1440),
-            ("poke_action_daily_limit", 1, 0, 20),
-            ("poke_action_cooldown_minutes", 30, 0, 1440),
-            # T38 rhythm: burst length, burst gaps, closing silence and body length.
-            ("proactive_burst_max_messages", 2, 2, 3),
-            ("proactive_burst_gap_min_seconds", 45, 10, 600),
-            ("proactive_burst_gap_max_seconds", 180, 10, 900),
-            ("proactive_closing_grace_minutes", 45, 0, 240),
-            ("proactive_closing_contacts_threshold", 3, 1, 10),
-            ("proactive_intensity_body_chars", 0, 0, 2000),
-            # T40 anchors and the explicitly bounded insomnia window.
-            ("greeting_idle_minutes", 30, 0, 240),
-            ("insomnia_night_daily_limit", 1, 0, 3),
-            ("proactive_share_probability", 100, 0, 100),
-            # T39 appointment timing and T41 persona judgement.
-            ("appointment_lead_minutes", 30, 0, 240),
-            ("appointment_lag_minutes", 0, 0, 180),
-            ("appointment_pre_silence_minutes", 20, 0, 240),
-            ("proactive_persona_judge_threshold", 62, 0, 100),
-            ("proactive_persona_judge_cache_minutes", 180, 0, 720),
-            # T43 morning chain: one wake-up confirmation at most, bounded window.
-            ("morning_nudge_delay_minutes", 25, 10, 90),
-            ("morning_nudge_max_attempts", 1, 0, 2),
-            ("routine_window_days", 60, 14, 180),
-            ("wake_contact_window_minutes", 90, 15, 240),
-            ("wake_contact_min_confidence", 65, 40, 100),
-            ("wake_contact_max_daily", 1, 0, 3))) + tuple(
-        ContactField(GROUP + "." + name, GROUP, GROUP, ValueKind.INTEGER, default,
-            minimum=minimum, maximum=maximum, layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP)
-        for name, default, minimum, maximum in (
-            ("generation_history_limit", 8, 0, 64),
-            ("history_max_chars", 8192, 0, 8192),
-            ("official_alert_poll_minutes", 5, 1, 1440),
-            ("weather_sample_minutes", 60, 10, 1440))) + (ContactField(
-        GROUP + ".unanswered_max_interval_multiplier", GROUP, GROUP, ValueKind.WEIGHT, 2.2,
-        minimum=1.0, maximum=8.0, layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP), ContactField(
-        GROUP + ".dedup_min_overlap_ratio", GROUP, GROUP, ValueKind.PROBABILITY, 0.0,
-        layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP), ContactField(
-        GROUP + ".silence_min_confidence", GROUP, GROUP, ValueKind.PROBABILITY, 0.66,
-        layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP), ContactField(
-        GROUP + ".silence_feedback_penalty", GROUP, GROUP, ValueKind.PROBABILITY, 0.2,
-        layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP), ContactField(
-        GROUP + ".external_event_self_link_weight", GROUP, GROUP, ValueKind.WEIGHT, 1.5,
-        minimum=0.1, maximum=5.0, layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP),
-        ContactField(GROUP + ".morning_wake_confidence_floor", GROUP, GROUP, ValueKind.PROBABILITY, 0.25,
-            layers=LAYERS, apply_mode=ApplyMode.IMMEDIATE, owner_id=GROUP))
+    return (
+        fields
+        + (
+            ContactField(
+                GROUP + ".automatic_enabled",
+                GROUP,
+                GROUP,
+                ValueKind.BOOLEAN,
+                False,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+        )
+        + tuple(
+            ContactField(
+                GROUP + "." + name,
+                GROUP,
+                GROUP,
+                ValueKind.INTEGER,
+                default,
+                minimum=minimum,
+                maximum=maximum,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            )
+            for name, default, minimum, maximum in (
+                ("interval_seconds", 3600, 60, 604800),
+                ("idle_seconds", 900, 0, 86400),
+                ("unanswered_slowdown_start", 1, 1, 10),
+                ("unanswered_pause_after", 0, 0, 50),
+                ("dedup_sent_window_minutes", 240, 0, 1440),
+                ("dedup_last_message_window_minutes", 240, 0, 1440),
+                ("dedup_weather_window_minutes", 1080, 0, 2880),
+                ("dedup_min_shared_tokens", 1, 1, 4),
+                ("event_max_age_seconds", 3600, 60, 86400),
+                ("max_contacts_24h", 3, 0, 100),
+                ("balance_check_interval_minutes", 60, 5, 1440),
+                ("news_check_interval_minutes", 180, 15, 1440),
+                ("web_exploration_min_interval_hours", 8, 1, 168),
+                ("web_exploration_result_count", 8, 1, 30),
+                ("news_hot_result_count", 10, 3, 30),
+                ("external_event_self_link_cooldown_hours", 12, 0, 168),
+                ("screen_glance_daily_limit", 1, 0, 20),
+                ("screen_glance_cooldown_minutes", 240, 0, 10080),
+                # V1 goodnight_screen_check_delay_minutes (1-180) and the unanswered
+                # peek window/cooldown (10-240 / 30-1440).
+                ("screen_glance_goodnight_delay_minutes", 45, 1, 180),
+                ("screen_glance_followup_after_minutes", 45, 10, 240),
+                ("screen_glance_followup_cooldown_minutes", 180, 30, 1440),
+                ("contact_followup_after_minutes", 45, 10, 1440),
+                ("contact_followup_cooldown_minutes", 180, 30, 2880),
+                ("balance_message_cooldown_hours", 24, 1, 168),
+                # C2-5: how many days ahead an upcoming anniversary may be noticed.
+                # 0 keeps the V1 behaviour exactly — same-day greeting only. Named after
+                # the V1 key so the ledger mapping stays one-to-one.
+                ("important_date_lookahead_days", 0, 0, 30),
+                # C2-5: how long after a meal checkin the role may follow up. The meal
+                # slot width was a hard-coded 45 minutes before this.
+                ("meal_care_followup_minutes", 45, 1, 240),
+                ("balance_low_threshold", 10, 0, 1000000000),
+                ("balance_critical_threshold", 3, 0, 1000000000),
+                ("balance_low_percent_threshold", 15, 0, 100),
+                ("balance_critical_percent_threshold", 5, 0, 100),
+                ("voice_action_max_chars", 30, 6, 80),
+                ("voice_action_cooldown_minutes", 60, 0, 1440),
+                ("poke_action_daily_limit", 1, 0, 20),
+                ("poke_action_cooldown_minutes", 30, 0, 1440),
+                # T38 rhythm: burst length, burst gaps, closing silence and body length.
+                ("proactive_burst_max_messages", 2, 2, 3),
+                ("proactive_burst_gap_min_seconds", 45, 10, 600),
+                ("proactive_burst_gap_max_seconds", 180, 10, 900),
+                ("proactive_closing_grace_minutes", 45, 0, 240),
+                ("proactive_closing_contacts_threshold", 3, 1, 10),
+                ("proactive_intensity_body_chars", 0, 0, 2000),
+                # T40 anchors and the explicitly bounded insomnia window.
+                ("greeting_idle_minutes", 30, 0, 240),
+                ("insomnia_night_daily_limit", 1, 0, 3),
+                ("proactive_share_probability", 100, 0, 100),
+                # T39 appointment timing and T41 persona judgement.
+                ("appointment_lead_minutes", 30, 0, 240),
+                ("appointment_lag_minutes", 0, 0, 180),
+                ("appointment_pre_silence_minutes", 20, 0, 240),
+                ("proactive_persona_judge_threshold", 62, 0, 100),
+                ("proactive_persona_judge_cache_minutes", 180, 0, 720),
+                # T43 morning chain: one wake-up confirmation at most, bounded window.
+                ("morning_nudge_delay_minutes", 25, 10, 90),
+                ("morning_nudge_max_attempts", 1, 0, 2),
+                ("routine_window_days", 60, 14, 180),
+                ("wake_contact_window_minutes", 90, 15, 240),
+                ("wake_contact_min_confidence", 65, 40, 100),
+                ("wake_contact_max_daily", 1, 0, 3),
+            )
+        )
+        + tuple(
+            ContactField(
+                GROUP + "." + name,
+                GROUP,
+                GROUP,
+                ValueKind.INTEGER,
+                default,
+                minimum=minimum,
+                maximum=maximum,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            )
+            for name, default, minimum, maximum in (
+                ("generation_history_limit", 8, 0, 64),
+                ("history_max_chars", 8192, 0, 8192),
+                ("official_alert_poll_minutes", 5, 1, 1440),
+                ("weather_sample_minutes", 60, 10, 1440),
+            )
+        )
+        + (
+            ContactField(
+                GROUP + ".unanswered_max_interval_multiplier",
+                GROUP,
+                GROUP,
+                ValueKind.WEIGHT,
+                2.2,
+                minimum=1.0,
+                maximum=8.0,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+            ContactField(
+                GROUP + ".dedup_min_overlap_ratio",
+                GROUP,
+                GROUP,
+                ValueKind.PROBABILITY,
+                0.0,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+            ContactField(
+                GROUP + ".silence_min_confidence",
+                GROUP,
+                GROUP,
+                ValueKind.PROBABILITY,
+                0.66,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+            ContactField(
+                GROUP + ".news_share_probability",
+                GROUP,
+                GROUP,
+                ValueKind.PROBABILITY,
+                1.0,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+            ContactField(
+                GROUP + ".silence_feedback_penalty",
+                GROUP,
+                GROUP,
+                ValueKind.PROBABILITY,
+                0.2,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+            ContactField(
+                GROUP + ".external_event_self_link_weight",
+                GROUP,
+                GROUP,
+                ValueKind.WEIGHT,
+                1.5,
+                minimum=0.1,
+                maximum=5.0,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+            ContactField(
+                GROUP + ".morning_wake_confidence_floor",
+                GROUP,
+                GROUP,
+                ValueKind.PROBABILITY,
+                0.25,
+                layers=LAYERS,
+                apply_mode=ApplyMode.IMMEDIATE,
+                owner_id=GROUP,
+            ),
+        )
+    )
 
 
 def with_contact_fields(registry):

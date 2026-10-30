@@ -55,7 +55,7 @@ def _query_all(store, context):
                     or item.get("execution_restored") is not False):
                 raise RuntimeError("history_became_current_or_executable")
             previous = documents.setdefault(item["id"], {"text": "", "kind": item["kind"],
-                "person": item["source_person_id"], "field": item["source_field"]})
+                "person": item.get("source_person_id", ""), "field": item["source_field"]})
             if len(previous["text"]) != item["excerpt_start"]:
                 raise RuntimeError("history_pagination_gap")
             previous["text"] += item["text"]

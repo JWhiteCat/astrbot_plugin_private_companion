@@ -11,6 +11,8 @@ reading them never sends anything.
 
 from __future__ import annotations
 
+import tests.astrbot_data_root  # noqa: F401
+
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -25,10 +27,10 @@ from companion_v2.conversation.group_interjection import (ACKNOWLEDGED_STEP, IGN
 from companion_v2.conversation.group_observation import (PREFIX, TOPIC_KIND, fold_mood, fold_topic_threads,
                                                           joke_guard, moment_candidates, moment_portrait,
                                                           topic_signature, topic_signatures_similar)
-from companion_v2.conversation.group_timing import RepeatPolicy, clean_group_text, repeat_burst, repeat_signature
+from companion_v2.conversation.group_timing import clean_group_text, repeat_burst, repeat_signature
 from companion_v2.conversation.participation import (CONFIG_GROUP, CONFIG_LIMITS, GroupParticipation,
                                                      GroupParticipationConfigurationOwner,
-                                                     configuration_fields)
+                                                     configuration_fields, group_participation_settings)
 from companion_v2.foundation.refs import ScopeKind, ScopeRef, SubjectKind, SubjectRef
 from companion_v2.memory.group.access import owner_key
 from companion_v2.storage.runtime import StorageRuntime
@@ -269,10 +271,13 @@ class RepeatFollowTests(GroupRhythmFixture):
         for name, bounds in CONFIG_LIMITS.items():
             self.assertEqual(declared[name], bounds)
         for name, bad in (("group_repeat_trigger_threshold", 2), ("group_repeat_window_seconds", 5),
-                          ("group_interject_max_daily", 21), ("group_repeat_follow_probability", 1.5),
+                          ("group_interject_max_daily", 2147483648), ("group_repeat_follow_probability", 1.5),
                           ("group_interject_feedback_window_seconds", 30)):
             with self.subTest(name=name), self.assertRaises(Exception):
                 fields[CONFIG_GROUP + "." + name].validate(bad)
+        fields[CONFIG_GROUP + ".group_interject_max_daily"].validate(30)
+        self.configure(group_interject_max_daily=30)
+        self.assertEqual(group_participation_settings(self.runtime, self.context)["group_interject_max_daily"], 30)
         with self.assertRaises(Exception):
             self.configure(group_repeat_interrupt_text="x" * 81)
         # A value written outside the owner is still refused by its consumer.

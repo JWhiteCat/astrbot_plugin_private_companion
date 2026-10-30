@@ -102,8 +102,8 @@ class RelationshipProfileMappingTests(unittest.TestCase):
     def test_private_contacts_still_use_the_shared_identity_rule(self):
         contacts, rejected = private_contacts({"users": {
             "200": old_user(), "201": old_user("201", identity_platform_kind="qq_official")}})
-        self.assertEqual([item["native_account_id"] for item in contacts], ["200"])
-        self.assertEqual([item["reason"] for item in rejected], ["private_identity_unverified"])
+        self.assertEqual([item["native_account_id"] for item in contacts], ["200", "201"])
+        self.assertEqual(rejected, ())
 
 
 class RelationshipProfileMigrationTests(MultiFixture, unittest.IsolatedAsyncioTestCase):

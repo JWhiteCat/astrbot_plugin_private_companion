@@ -45,7 +45,16 @@ class PrivateContactConfiguration:
     fingerprint: str
 
 
-def private_contact_configuration(root, configuration, *, persona_id, platform_id, account_id, participant_id):
+def private_contact_configuration(
+    root,
+    configuration,
+    *,
+    persona_id,
+    platform_id,
+    account_id,
+    participant_id,
+    verified_primary_persona_id="",
+):
     """Read preferences, never old plans, queues, pause state or send counters."""
     from .configuration_migration import _number
     from .data_migration import _persona_sources, _profile_data, _selected_profile
@@ -73,6 +82,8 @@ def private_contact_configuration(root, configuration, *, persona_id, platform_i
         basic = configuration.get("basic_config", {})
         owner = basic.get("plugin_specific_persona_id", "") if isinstance(basic, dict) else ""
         owner = owner or configuration.get("plugin_specific_persona_id", "")
+    if not owner and verified_primary_persona_id == persona_id:
+        owner = verified_primary_persona_id
     if owner != persona_id:
         inventory, _ = _persona_sources(Path(root), primary)
         selected, issue, _ = _selected_profile(Path(root), persona_id, inventory, primary)
@@ -92,10 +103,13 @@ def private_contact_configuration(root, configuration, *, persona_id, platform_i
             continue
         # Identity metadata is adapter evidence; numeric keys and display names
         # alone are insufficient across multiple accounts or merged profiles.
-        if (user.get("identity_subject_id") != participant_id
-                or user.get("identity_adapter_instance_id") != platform_id
-                or user.get("identity_bot_id") != account_id
-                or user.get("identity_platform_kind") not in ("onebot", "aiocqhttp")):
+        if (
+            user.get("identity_subject_id") != participant_id
+            or user.get("identity_adapter_instance_id") != platform_id
+            or user.get("identity_bot_id") != account_id
+            or user.get("identity_platform_kind")
+            not in ("onebot", "aiocqhttp", "qq_official", "qq_official_webhook")
+        ):
             continue
         matches.append((str(user_key), user))
     if not matches:
