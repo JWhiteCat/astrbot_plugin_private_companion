@@ -279,6 +279,25 @@ test('the settings section reads and saves through the reply route family', asyn
   assert.equal(harnessed.store.size, 0);
 });
 
+test('newline document formats remain editable and allow saving', async () => {
+  const harnessed = harness();
+  harnessed.page.mount(harnessed.root, {view: 'perception'});
+  await drains();
+  harnessed.requests[0].resolve(status({file_understanding_format_groups: '文本\nPDF\nWord（DOCX）\nExcel（XLSX）\nPowerPoint（PPTX）'}));
+  await drains();
+  const instance = live(harnessed);
+  const field = instance.state.container.fields.file_understanding_format_groups;
+  assert.equal(harnessed.workbench.valid(field, instance.state.draft.file_understanding_format_groups), true);
+  assert.deepEqual(JSON.parse(instance.state.draft.file_understanding_format_groups),
+    ['文本', 'PDF', 'Word（DOCX）', 'Excel（XLSX）', 'PowerPoint（PPTX）']);
+  const saving = instance.save(false);
+  await drains();
+  assert.equal(harnessed.requests.length, 2);
+  harnessed.requests[1].resolve({result: {operation_id: 'formats'}, status: status()});
+  await saving;
+  harnessed.page.unmount();
+});
+
 test('legacy all cleanup scope migrates to all three positions before validation', async () => {
   const harnessed = harness();
   harnessed.page.mount(harnessed.root, {view: 'expression'});
@@ -657,27 +676,24 @@ test('replacement pairs and component order are edited without JSON controls', a
   assert.deepEqual(plain(JSON.parse(instance.state.draft.component_order)), []);
 });
 
-test('reply expression, perception, and decision settings partition every field exactly once', async () => {
+test('reply expression, perception, and decision settings partition every field exactly once', async t => {
   const harnessed = await loaded(harness());
+  t.after(() => harnessed.page.unmount());
   const expression = plain(live(harnessed).state.container.groups.flatMap(group => group.fields));
-  harnessed.page.mount(harnessed.root, {view: 'decision'});
-  await drains();
-  harnessed.requests[1].resolve(status());
-  await drains();
-  const decision = plain(live(harnessed).state.container.groups.flatMap(group => group.fields));
-  assert.deepEqual(plain(live(harnessed).state.container.groups.map(group => group.id)),
+  const decisionHarness = await loaded(harness(), 'decision');
+  t.after(() => decisionHarness.page.unmount());
+  const decision = plain(live(decisionHarness).state.container.groups.flatMap(group => group.fields));
+  assert.deepEqual(plain(live(decisionHarness).state.container.groups.map(group => group.id)),
     ['wakeup_direct', 'wakeup_interest', 'wakeup_members', 'wakeup_cold_group', 'wakeup_fatigue',
       'group_continuation', 'private_debounce', 'silence_policy', 'group_air_guard', 'private_closing', 'group_content_safety']);
-  harnessed.page.mount(harnessed.root, {view: 'perception'});
-  await drains();
-  harnessed.requests[2].resolve(status());
-  await drains();
-  const perception = plain(live(harnessed).state.container.groups.flatMap(group => group.fields));
+  const perceptionHarness = await loaded(harness(), 'perception');
+  t.after(() => perceptionHarness.page.unmount());
+  const perception = plain(live(perceptionHarness).state.container.groups.flatMap(group => group.fields));
   const exposed = [...expression, ...perception, ...decision];
   assert.equal(exposed.length, new Set(exposed).size, 'a setting must not be duplicated across modules');
   assert.deepEqual([...exposed].sort(), Object.keys(DEFAULTS)
     .filter(name => name !== 'rules_enabled' && name !== 'file_understanding_formats').sort());
-  assert.deepEqual(plain(live(harnessed).state.container.groups.map(group => group.id)),
+  assert.deepEqual(plain(live(perceptionHarness).state.container.groups.map(group => group.id)),
     ['media_permissions', 'context_image', 'image_narration', 'video_narration', 'file_understanding', 'forwards']);
   assert.deepEqual(perception, ['image_understanding_private_enabled', 'image_understanding_group_enabled',
     'video_understanding_private_enabled', 'video_understanding_group_enabled',
@@ -693,10 +709,9 @@ test('reply expression, perception, and decision settings partition every field 
     'file_understanding_format_groups', 'file_understanding_max_size_mb',
     'file_understanding_max_chars', 'file_understanding_timeout_seconds', 'file_understanding_prompt',
     'forward_message_adaptation_enabled']);
-  assert.equal(harnessed.page.selectSection('segment'), false);
-  assert.equal(harnessed.page.selectSection('context_image'), true);
-  assert.equal(harnessed.page.selectSection('forwards'), true);
-  harnessed.page.unmount();
+  assert.equal(perceptionHarness.page.selectSection('segment'), false);
+  assert.equal(perceptionHarness.page.selectSection('context_image'), true);
+  assert.equal(perceptionHarness.page.selectSection('forwards'), true);
 });
 
 test('decision view edits the same reply route and omits expression-only tools', async () => {

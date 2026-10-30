@@ -675,6 +675,11 @@ window.CompanionReplyPage = (() => {
 
   /* 旧版整段清理迁成三项全选；其余单值保持原样，避免无改动也变脏。 */
   function normalizeReplyDraft(draft) {
+    const formats = draft?.file_understanding_format_groups;
+    if (typeof formats === "string" && formats.trim() && !formats.trim().startsWith("[")) {
+      draft.file_understanding_format_groups = JSON.stringify(
+        formats.split(/[\r\n,;，；]+/).map(item => item.trim()).filter(Boolean));
+    }
     if (draft?.content_cleanup_scope === "all") {
       draft.content_cleanup_scope = "leading、middle、trailing";
     }
