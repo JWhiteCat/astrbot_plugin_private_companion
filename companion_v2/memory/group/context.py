@@ -23,6 +23,9 @@ class GroupMemoryContext:
     def capture(self, context, batch_id):
         snapshot = {"version": VERSION, "context_key": context.key, "batch_id": batch_id,
                     "available": True, "references": [], "partial": True}
+        owner = self.memory.messages.memory_context
+        if owner is not None and owner.delegated():
+            return {**snapshot, "available": False}
         try:
             self.memory.access.check(context)
         except TaskError:
@@ -51,6 +54,9 @@ class GroupMemoryContext:
                 or type(snapshot["references"]) is not list or len(snapshot["references"]) > 32
                 or type(snapshot["available"]) is not bool or snapshot["partial"] is not True):
             raise TaskError("group_memory_snapshot_invalid", "memory snapshot must keep its original group batch")
+        owner = self.memory.messages.memory_context
+        if owner is not None and owner.delegated():
+            return ()
         if not snapshot["available"]:
             if snapshot["references"]:
                 raise TaskError("group_memory_snapshot_invalid", "unavailable memory cannot contain references")

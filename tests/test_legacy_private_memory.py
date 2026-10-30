@@ -15,7 +15,7 @@ from tests.memory_support import MemoryFixture
 
 def private_source(root, account, actor, *, text="七月二十四日一起看蓝风铃", bad_hash=False):
     identity = {"companion_instance_id": "astrbot_plugin_private_companion",
-        "bot_account_id": "aiocqhttp:" + account, "adapter_instance_id": "aiocqhttp:main",
+        "bot_account_id": "aiocqhttp:" + account, "adapter_instance_id": "onebot",
         "subject_namespace": "aiocqhttp:user", "platform_subject_id": actor}
     key = "chat-origin-v1:" + fingerprint(identity)
     content = {"companion_memory": {"items": [{"text": text, "created_at": "2026-07-24T08:00:00+08:00"}]},

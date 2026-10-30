@@ -321,7 +321,7 @@ class MemoryContext:
     def contributions(self, snapshot, context):
         if not isinstance(snapshot, dict) or snapshot.get("version") != 1 or snapshot.get("context_key") != context.key:
             raise TaskError("memory_snapshot_invalid", "memory context must retain its original identity")
-        if snapshot.get("state") == "unavailable":
+        if snapshot.get("state") == "unavailable" or self.delegated():
             return ()
         if snapshot.get("state") == DELEGATED_STATE:
             # 快照是让位期封的、但提问时判定已经反过来（或反过来）：以**提问时**的

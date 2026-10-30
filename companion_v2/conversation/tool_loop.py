@@ -265,7 +265,7 @@ class LocalRoleTools:
         # 让位时 ``memory.*`` 既不进 filtered、也不进 catalog_for 的结果，模型那边
         # 一套记忆工具都没有。只让位注入而留着工具，模型就会把新记忆写进第二个库，
         # 那正是这次要消掉的重复实现。
-        memory = self.memory if not self._memory_is_external() else None
+        memory = self.memory
         # 归属判定用的是「没有让位时的」记忆动作集合，而不是上面那个可能已被置空的
         # ``memory``：base 是按 ``action not in filtered`` 过滤的，如果让位时 filtered
         # 里没有记忆动作，构造期加进 self.catalog 的那几个就会从 base 漏给模型。
@@ -587,7 +587,7 @@ class LocalRoleTools:
                 return self.acquaintance.execute(context, run.task.spec.request_ref, call.call_id, call.action, arguments)
             return self.group_memory.execute(context, run.task.spec.request_ref, call.call_id, call.action, arguments)
         if self.memory is not None and call.action in self.memory.actions:
-            if self._memory_is_external():
+            if self._memory_is_external() and call.action != "memory.legacy.query":
                 # 目录里已经没有这些工具了；能走到这里说明调用方拿的是旧目录或伪造的
                 # 动作。拒绝而不是照做：照做就会把记忆写进第二个库。
                 raise TaskError("memory_access_denied", "memory is currently provided by another plugin")

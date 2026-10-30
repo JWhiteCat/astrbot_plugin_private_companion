@@ -61,6 +61,18 @@ class CoreReplyOwnerToolTests(NativeOwnerCalls, MultiFixture, unittest.IsolatedA
             "calendar.read", "calendar.write"})))
         self.app = await self.start_host()
 
+    async def test_external_memory_keeps_native_historical_tool_without_local_live_tools(self):
+        from tests.test_memory_ownership import external
+
+        self.app.memory.owner = external()
+        event = self.event(identifier="external-native-history")
+        _, request = await self.bind(event)
+        self.assertIsNone(request.func_tool.get_tool(native_tool_name("memory.proposal.submit")))
+        result = await self.call(event, request, "memory.legacy.query", {"query_intent": "old history"})
+        self.assertEqual(result["state"], "succeeded", result)
+        self.assertEqual(self.app.runtime.read_one("SELECT COUNT(*) FROM memory_atoms", ())[0], 0)
+        self.assert_no_reply_work()
+
     async def test_memory_growth_relationship_and_calendar_commands_use_real_native_evidence(self):
         event = self.event(identifier="owner-native-evidence", text="我平时不喝咖啡，周末我们画水彩吧")
         prepared, request = await self.bind(event)
@@ -133,9 +145,20 @@ class CoreReplyGroupOwnerToolTests(NativeOwnerCalls, GroupFixture, unittest.Isol
         self.assert_no_reply_work()
 
     async def test_native_group_slang_uses_original_input_and_is_removed_after_withdrawal(self):
+        from companion_v2.conversation.reply_settings import (
+            GROUP, ReplyConfigurationOwner, configuration_fields, target_for,
+        )
+
         self.app.semantics.gateway.port = SemanticPort()
         event = self.group_event(identifier="native-group-slang", text="咕咕就是临时取消约好的活动")
         prepared, request = await self.bind(event)
+        # Keep this turn authorized so withdrawal tests semantic invalidation
+        # rather than the independent recall-silence guard.
+        owner = ReplyConfigurationOwner(self.app.runtime)
+        target, fields = target_for(prepared["context"]), configuration_fields()
+        owner.write(target, fields, changes={GROUP + ".recall_silence_enabled": False},
+                    reset=(), expected_revision=owner.read(target, fields).revision,
+                    observed_at=self.clock.now())
         evidence = await self.call(event, request, "turn.evidence", {})
         arguments = {"term": "咕咕", "meaning": "临时取消约好的活动",
             "usage": "这周末咕咕了", "input_handle": evidence["input_handle"]}
@@ -146,7 +169,6 @@ class CoreReplyGroupOwnerToolTests(NativeOwnerCalls, GroupFixture, unittest.Isol
         require(self.app.messages.recalls.accept(MessageRecall.from_scope(prepared["context"].scope,
             prepared["event_id"], prepared["context"].actor.principal.native_account_id)))
         read = await self.call(event, request, "slang.search", {"query": "咕咕"}, "slang-after-withdrawal")
-        print("DEBUG slang read", read)
         self.assertEqual(read["payload"]["items"], [], read)
         replay = await self.call(event, request, "slang.search", {"query": "咕咕"})
         self.assertEqual(replay["code"], "semantic_result_changed", replay)

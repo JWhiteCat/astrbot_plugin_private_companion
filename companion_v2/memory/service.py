@@ -19,6 +19,7 @@ class MemoryService:
         self.owner = owner
         self.settings = MemorySettings(configuration) if configuration is not None else None
         self.writer = MemoryWriter(tasks, policy=policy, settings=self.settings)
+        self.writer.access.live_memory_delegated = self.delegated
         self.query = MemoryQuery(self.writer)
         self.context = MemoryContext(self)
         self.experiences = MemoryExperiences(self.writer)

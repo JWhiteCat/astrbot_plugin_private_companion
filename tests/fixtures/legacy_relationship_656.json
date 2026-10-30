@@ -1,0 +1,3550 @@
+{
+  "source": "menglimi/astrbot_plugin_private_companion v6.5.6",
+  "source_sha256": {
+    "relationship_ledger.py": "f18862101c2687398eaee15adc5c59711367af0fd13c6a6d73cc9558ed737bfe",
+    "relationship_policy.py": "70a87a0faeed65ec7847ad475cd1e457b64fafffbd21a4622f10ae3ceef25981"
+  },
+  "vectors": [
+    {
+      "kind": "events",
+      "role": "owner",
+      "mode": "normal",
+      "score": 24,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "a",
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 1,
+            "score": 25,
+            "entry": {
+              "event_key": "5bf8b7d878b43ba9ed55676c",
+              "reason_code": "inbound",
+              "delta": 1,
+              "score_before": 24,
+              "score_after": 25,
+              "created_at": 1793275200.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 25,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 25,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "fast_inbound",
+            "event_id": "a",
+            "now": 1793275201.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "duplicate_event",
+            "delta": 0,
+            "score": 25
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 25,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 25,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 30,
+          "arguments": {
+            "reason_code": "care_feedback",
+            "event_id": "b",
+            "now": 1793275202.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 4,
+            "score": 29,
+            "entry": {
+              "event_key": "7815a03352d03bdfe74060bf",
+              "reason_code": "care_feedback",
+              "delta": 4,
+              "score_before": 25,
+              "score_after": 29,
+              "created_at": 1793275202.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 29,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 29,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": -30,
+          "arguments": {
+            "reason_code": "boundary_violation",
+            "event_id": "c",
+            "now": 1793275203.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -12,
+            "score": 17,
+            "entry": {
+              "event_key": "5e2cd27b4048ebca346eccad",
+              "reason_code": "boundary_violation",
+              "delta": -12,
+              "score_before": 29,
+              "score_after": 17,
+              "created_at": 1793275203.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 17,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 17,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "d",
+            "now": 1793275204.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 4,
+            "score": 21,
+            "entry": {
+              "event_key": "f1b50c51ef967488053c7bee",
+              "reason_code": "inbound",
+              "delta": 4,
+              "score_before": 17,
+              "score_after": 21,
+              "created_at": 1793275204.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 21,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": 17,
+                "score_after": 21,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 9,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275204.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 21,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": 17,
+                "score_after": 21,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 9,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275204.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "e",
+            "now": 1793275205.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 3,
+            "score": 24,
+            "entry": {
+              "event_key": "5fbd14a1de8c3f0c47aff5c5",
+              "reason_code": "inbound",
+              "delta": 3,
+              "score_before": 21,
+              "score_after": 24,
+              "created_at": 1793275205.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 24,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": 17,
+                "score_after": 21,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 21,
+                "score_after": 24,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 24,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": 17,
+                "score_after": 21,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 21,
+                "score_after": 24,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "f",
+            "now": 1793275206.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "positive_daily_cap",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 24,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 24,
+                "score_after": 25,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": 25,
+                "score_after": 29,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 29,
+                "score_after": 17,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": 17,
+                "score_after": 21,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 21,
+                "score_after": 24,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          }
+        }
+      ]
+    },
+    {
+      "kind": "events",
+      "role": "friend",
+      "mode": "normal",
+      "score": 898,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 898,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "a",
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 1,
+            "score": 899,
+            "entry": {
+              "event_key": "5bf8b7d878b43ba9ed55676c",
+              "reason_code": "inbound",
+              "delta": 1,
+              "score_before": 898,
+              "score_after": 899,
+              "created_at": 1793275200.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 899,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 899,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "fast_inbound",
+            "event_id": "a",
+            "now": 1793275201.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "duplicate_event",
+            "delta": 0,
+            "score": 899
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 899,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 899,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 30,
+          "arguments": {
+            "reason_code": "care_feedback",
+            "event_id": "b",
+            "now": 1793275202.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 3,
+            "score": 902,
+            "entry": {
+              "event_key": "7815a03352d03bdfe74060bf",
+              "reason_code": "care_feedback",
+              "delta": 3,
+              "score_before": 899,
+              "score_after": 902,
+              "created_at": 1793275202.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 902,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 4,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 902,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 4,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": -30,
+          "arguments": {
+            "reason_code": "boundary_violation",
+            "event_id": "c",
+            "now": 1793275203.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -12,
+            "score": 890,
+            "entry": {
+              "event_key": "5e2cd27b4048ebca346eccad",
+              "reason_code": "boundary_violation",
+              "delta": -12,
+              "score_before": 902,
+              "score_after": 890,
+              "created_at": 1793275203.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 890,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 4,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 890,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 4,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "d",
+            "now": 1793275204.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 3,
+            "score": 893,
+            "entry": {
+              "event_key": "f1b50c51ef967488053c7bee",
+              "reason_code": "inbound",
+              "delta": 3,
+              "score_before": 890,
+              "score_after": 893,
+              "created_at": 1793275204.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 893,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 890,
+                "score_after": 893,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 7,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275204.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 893,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 890,
+                "score_after": 893,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 7,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275204.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "e",
+            "now": 1793275205.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 3,
+            "score": 896,
+            "entry": {
+              "event_key": "5fbd14a1de8c3f0c47aff5c5",
+              "reason_code": "inbound",
+              "delta": 3,
+              "score_before": 893,
+              "score_after": 896,
+              "created_at": 1793275205.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 896,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 890,
+                "score_after": 893,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 893,
+                "score_after": 896,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 10,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 896,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 890,
+                "score_after": 893,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 893,
+                "score_after": 896,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 10,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "f",
+            "now": 1793275206.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 2,
+            "score": 898,
+            "entry": {
+              "event_key": "0ed16f0cd39d0185632e179e",
+              "reason_code": "inbound",
+              "delta": 2,
+              "score_before": 896,
+              "score_after": 898,
+              "created_at": 1793275206.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": 898,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 898,
+                "score_after": 899,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 3,
+                "score_before": 899,
+                "score_after": 902,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 902,
+                "score_after": 890,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 890,
+                "score_after": 893,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": 893,
+                "score_after": 896,
+                "created_at": 1793275205.0
+              },
+              {
+                "event_key": "0ed16f0cd39d0185632e179e",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 896,
+                "score_after": 898,
+                "created_at": 1793275206.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275206.0
+          }
+        }
+      ]
+    },
+    {
+      "kind": "events",
+      "role": "owner",
+      "mode": "normal",
+      "score": 1198,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1198,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "a",
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 1,
+            "score": 1199,
+            "entry": {
+              "event_key": "5bf8b7d878b43ba9ed55676c",
+              "reason_code": "inbound",
+              "delta": 1,
+              "score_before": 1198,
+              "score_after": 1199,
+              "created_at": 1793275200.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1199,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1199,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "fast_inbound",
+            "event_id": "a",
+            "now": 1793275201.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "duplicate_event",
+            "delta": 0,
+            "score": 1199
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1199,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1199,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 30,
+          "arguments": {
+            "reason_code": "care_feedback",
+            "event_id": "b",
+            "now": 1793275202.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 1,
+            "score": 1200,
+            "entry": {
+              "event_key": "7815a03352d03bdfe74060bf",
+              "reason_code": "care_feedback",
+              "delta": 1,
+              "score_before": 1199,
+              "score_after": 1200,
+              "created_at": 1793275202.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1200,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 2,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1200,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 2,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": -30,
+          "arguments": {
+            "reason_code": "boundary_violation",
+            "event_id": "c",
+            "now": 1793275203.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -12,
+            "score": 1188,
+            "entry": {
+              "event_key": "5e2cd27b4048ebca346eccad",
+              "reason_code": "boundary_violation",
+              "delta": -12,
+              "score_before": 1200,
+              "score_after": 1188,
+              "created_at": 1793275203.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1188,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 2,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1188,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 2,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "d",
+            "now": 1793275204.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 2,
+            "score": 1190,
+            "entry": {
+              "event_key": "f1b50c51ef967488053c7bee",
+              "reason_code": "inbound",
+              "delta": 2,
+              "score_before": 1188,
+              "score_after": 1190,
+              "created_at": 1793275204.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1190,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1188,
+                "score_after": 1190,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 4,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275204.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1190,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1188,
+                "score_after": 1190,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 4,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275204.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "e",
+            "now": 1793275205.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 2,
+            "score": 1192,
+            "entry": {
+              "event_key": "5fbd14a1de8c3f0c47aff5c5",
+              "reason_code": "inbound",
+              "delta": 2,
+              "score_before": 1190,
+              "score_after": 1192,
+              "created_at": 1793275205.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1192,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1188,
+                "score_after": 1190,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1190,
+                "score_after": 1192,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 6,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1192,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1188,
+                "score_after": 1190,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1190,
+                "score_after": 1192,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 6,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275205.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "f",
+            "now": 1793275206.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 2,
+            "score": 1194,
+            "entry": {
+              "event_key": "0ed16f0cd39d0185632e179e",
+              "reason_code": "inbound",
+              "delta": 2,
+              "score_before": 1192,
+              "score_after": 1194,
+              "created_at": 1793275206.0
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 1194,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": 1198,
+                "score_after": 1199,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 1,
+                "score_before": 1199,
+                "score_after": 1200,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -12,
+                "score_before": 1200,
+                "score_after": 1188,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1188,
+                "score_after": 1190,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1190,
+                "score_after": 1192,
+                "created_at": 1793275205.0
+              },
+              {
+                "event_key": "0ed16f0cd39d0185632e179e",
+                "reason_code": "inbound",
+                "delta": 2,
+                "score_before": 1192,
+                "score_after": 1194,
+                "created_at": 1793275206.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 8,
+              "negative": -12
+            },
+            "relationship_last_effective_at": 1793275206.0
+          }
+        }
+      ]
+    },
+    {
+      "kind": "events",
+      "role": "owner",
+      "mode": "owner_exclusive",
+      "score": 24,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "a",
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "fast_inbound",
+            "event_id": "a",
+            "now": 1793275201.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 30,
+          "arguments": {
+            "reason_code": "care_feedback",
+            "event_id": "b",
+            "now": 1793275202.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": -30,
+          "arguments": {
+            "reason_code": "boundary_violation",
+            "event_id": "c",
+            "now": 1793275203.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "d",
+            "now": 1793275204.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "e",
+            "now": 1793275205.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "f",
+            "now": 1793275206.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "owner_exclusive_frozen",
+            "delta": 0,
+            "score": 24
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "owner_exclusive",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          }
+        }
+      ]
+    },
+    {
+      "kind": "events",
+      "role": "friend",
+      "mode": "normal",
+      "score": -1198,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1198,
+            "relationship_ledger": [],
+            "relationship_score_schema_version": 2
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "a",
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 1,
+            "score": -1197,
+            "entry": {
+              "event_key": "5bf8b7d878b43ba9ed55676c",
+              "reason_code": "inbound",
+              "delta": 1,
+              "score_before": -1198,
+              "score_after": -1197,
+              "created_at": 1793275200.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1197,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1197,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 1,
+          "arguments": {
+            "reason_code": "fast_inbound",
+            "event_id": "a",
+            "now": 1793275201.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "duplicate_event",
+            "delta": 0,
+            "score": -1197
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1197,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1197,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 1,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275200.0
+          },
+          "delta": 30,
+          "arguments": {
+            "reason_code": "care_feedback",
+            "event_id": "b",
+            "now": 1793275202.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 4,
+            "score": -1193,
+            "entry": {
+              "event_key": "7815a03352d03bdfe74060bf",
+              "reason_code": "care_feedback",
+              "delta": 4,
+              "score_before": -1197,
+              "score_after": -1193,
+              "created_at": 1793275202.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1193,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1193,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": 0
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": -30,
+          "arguments": {
+            "reason_code": "boundary_violation",
+            "event_id": "c",
+            "now": 1793275203.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -7,
+            "score": -1200,
+            "entry": {
+              "event_key": "5e2cd27b4048ebca346eccad",
+              "reason_code": "boundary_violation",
+              "delta": -7,
+              "score_before": -1193,
+              "score_after": -1200,
+              "created_at": 1793275203.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1200,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275202.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1200,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 5,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275202.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "d",
+            "now": 1793275204.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 4,
+            "score": -1196,
+            "entry": {
+              "event_key": "f1b50c51ef967488053c7bee",
+              "reason_code": "inbound",
+              "delta": 4,
+              "score_before": -1200,
+              "score_after": -1196,
+              "created_at": 1793275204.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1196,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": -1200,
+                "score_after": -1196,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 9,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275204.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1196,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": -1200,
+                "score_after": -1196,
+                "created_at": 1793275204.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 9,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275204.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "e",
+            "now": 1793275205.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": 3,
+            "score": -1193,
+            "entry": {
+              "event_key": "5fbd14a1de8c3f0c47aff5c5",
+              "reason_code": "inbound",
+              "delta": 3,
+              "score_before": -1196,
+              "score_after": -1193,
+              "created_at": 1793275205.0
+            }
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1193,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": -1200,
+                "score_after": -1196,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": -1196,
+                "score_after": -1193,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275205.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1193,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": -1200,
+                "score_after": -1196,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": -1196,
+                "score_after": -1193,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275205.0
+          },
+          "delta": 4,
+          "arguments": {
+            "reason_code": "inbound",
+            "event_id": "f",
+            "now": 1793275206.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "positive_daily_cap",
+            "delta": 0,
+            "score": -1193
+          },
+          "after": {
+            "relationship_role": "friend",
+            "relationship_mode": "normal",
+            "relationship_score": -1193,
+            "relationship_ledger": [
+              {
+                "event_key": "5bf8b7d878b43ba9ed55676c",
+                "reason_code": "inbound",
+                "delta": 1,
+                "score_before": -1198,
+                "score_after": -1197,
+                "created_at": 1793275200.0
+              },
+              {
+                "event_key": "7815a03352d03bdfe74060bf",
+                "reason_code": "care_feedback",
+                "delta": 4,
+                "score_before": -1197,
+                "score_after": -1193,
+                "created_at": 1793275202.0
+              },
+              {
+                "event_key": "5e2cd27b4048ebca346eccad",
+                "reason_code": "boundary_violation",
+                "delta": -7,
+                "score_before": -1193,
+                "score_after": -1200,
+                "created_at": 1793275203.0
+              },
+              {
+                "event_key": "f1b50c51ef967488053c7bee",
+                "reason_code": "inbound",
+                "delta": 4,
+                "score_before": -1200,
+                "score_after": -1196,
+                "created_at": 1793275204.0
+              },
+              {
+                "event_key": "5fbd14a1de8c3f0c47aff5c5",
+                "reason_code": "inbound",
+                "delta": 3,
+                "score_before": -1196,
+                "score_after": -1193,
+                "created_at": 1793275205.0
+              }
+            ],
+            "relationship_score_schema_version": 2,
+            "relationship_daily_totals": {
+              "day": "2026-10-29",
+              "positive": 12,
+              "negative": -7
+            },
+            "relationship_last_effective_at": 1793275205.0
+          }
+        }
+      ]
+    },
+    {
+      "kind": "decay",
+      "score": 24,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 24,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1792929600.0
+          },
+          "arguments": {
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -2,
+            "score": 22,
+            "entry": {
+              "event_key": "natural_decay:2026-10-29",
+              "reason_code": "natural_decay",
+              "delta": -2,
+              "score_before": 24,
+              "score_after": 22,
+              "created_at": 1793275200.0,
+              "inactive_days": 4
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 22,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -2,
+                "score_before": 24,
+                "score_after": 22,
+                "created_at": 1793275200.0,
+                "inactive_days": 4
+              }
+            ],
+            "relationship_last_effective_at": 1792929600.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 22,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -2,
+                "score_before": 24,
+                "score_after": 22,
+                "created_at": 1793275200.0,
+                "inactive_days": 4
+              }
+            ],
+            "relationship_last_effective_at": 1792929600.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793275210.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "already_settled",
+            "delta": 0,
+            "score": 22
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 22,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -2,
+                "score_before": 24,
+                "score_after": 22,
+                "created_at": 1793275200.0,
+                "inactive_days": 4
+              }
+            ],
+            "relationship_last_effective_at": 1792929600.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 22,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -2,
+                "score_before": 24,
+                "score_after": 22,
+                "created_at": 1793275200.0,
+                "inactive_days": 4
+              }
+            ],
+            "relationship_last_effective_at": 1792929600.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793361600.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -2,
+            "score": 20,
+            "entry": {
+              "event_key": "natural_decay:2026-10-30",
+              "reason_code": "natural_decay",
+              "delta": -2,
+              "score_before": 22,
+              "score_after": 20,
+              "created_at": 1793361600.0,
+              "inactive_days": 5
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 20,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -2,
+                "score_before": 24,
+                "score_after": 22,
+                "created_at": 1793275200.0,
+                "inactive_days": 4
+              },
+              {
+                "event_key": "natural_decay:2026-10-30",
+                "reason_code": "natural_decay",
+                "delta": -2,
+                "score_before": 22,
+                "score_after": 20,
+                "created_at": 1793361600.0,
+                "inactive_days": 5
+              }
+            ],
+            "relationship_last_effective_at": 1792929600.0,
+            "relationship_decay_settled_day": "2026-10-30"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "decay",
+      "score": 605,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 605,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1791547200.0
+          },
+          "arguments": {
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -91,
+            "score": 514,
+            "entry": {
+              "event_key": "natural_decay:2026-10-29",
+              "reason_code": "natural_decay",
+              "delta": -91,
+              "score_before": 605,
+              "score_after": 514,
+              "created_at": 1793275200.0,
+              "inactive_days": 20
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 514,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -91,
+                "score_before": 605,
+                "score_after": 514,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 514,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -91,
+                "score_before": 605,
+                "score_after": 514,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793275210.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "already_settled",
+            "delta": 0,
+            "score": 514
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 514,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -91,
+                "score_before": 605,
+                "score_after": 514,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 514,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -91,
+                "score_before": 605,
+                "score_after": 514,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793361600.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -8,
+            "score": 506,
+            "entry": {
+              "event_key": "natural_decay:2026-10-30",
+              "reason_code": "natural_decay",
+              "delta": -8,
+              "score_before": 514,
+              "score_after": 506,
+              "created_at": 1793361600.0,
+              "inactive_days": 21
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 506,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -91,
+                "score_before": 605,
+                "score_after": 514,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              },
+              {
+                "event_key": "natural_decay:2026-10-30",
+                "reason_code": "natural_decay",
+                "delta": -8,
+                "score_before": 514,
+                "score_after": 506,
+                "created_at": 1793361600.0,
+                "inactive_days": 21
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-30"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "decay",
+      "score": 605,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 605,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793188800.0
+          },
+          "arguments": {
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -5,
+            "score": 600,
+            "entry": {
+              "event_key": "natural_decay:2026-10-29",
+              "reason_code": "natural_decay",
+              "delta": -5,
+              "score_before": 605,
+              "score_after": 600,
+              "created_at": 1793275200.0,
+              "inactive_days": 20
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 600,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -5,
+                "score_before": 605,
+                "score_after": 600,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793188800.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 600,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -5,
+                "score_before": 605,
+                "score_after": 600,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793188800.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793275210.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "already_settled",
+            "delta": 0,
+            "score": 600
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 600,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -5,
+                "score_before": 605,
+                "score_after": 600,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793188800.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 600,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -5,
+                "score_before": 605,
+                "score_after": 600,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793188800.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793361600.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "stage_hysteresis",
+            "delta": 0,
+            "score": 600
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 600,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -5,
+                "score_before": 605,
+                "score_after": 600,
+                "created_at": 1793275200.0,
+                "inactive_days": 20
+              }
+            ],
+            "relationship_last_effective_at": 1791547200.0,
+            "relationship_last_decay_stage_drop_at": 1793188800.0,
+            "relationship_decay_settled_day": "2026-10-30"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "decay",
+      "score": 900,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 900,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          },
+          "arguments": {
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -251,
+            "score": 649,
+            "entry": {
+              "event_key": "natural_decay:2026-10-29",
+              "reason_code": "natural_decay",
+              "delta": -251,
+              "score_before": 900,
+              "score_after": 649,
+              "created_at": 1793275200.0,
+              "inactive_days": 40
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 649,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -251,
+                "score_before": 900,
+                "score_after": 649,
+                "created_at": 1793275200.0,
+                "inactive_days": 40
+              }
+            ],
+            "relationship_last_effective_at": 1789819200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 649,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -251,
+                "score_before": 900,
+                "score_after": 649,
+                "created_at": 1793275200.0,
+                "inactive_days": 40
+              }
+            ],
+            "relationship_last_effective_at": 1789819200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793275210.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "already_settled",
+            "delta": 0,
+            "score": 649
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 649,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -251,
+                "score_before": 900,
+                "score_after": 649,
+                "created_at": 1793275200.0,
+                "inactive_days": 40
+              }
+            ],
+            "relationship_last_effective_at": 1789819200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 649,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -251,
+                "score_before": 900,
+                "score_after": 649,
+                "created_at": 1793275200.0,
+                "inactive_days": 40
+              }
+            ],
+            "relationship_last_effective_at": 1789819200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-29"
+          },
+          "arguments": {
+            "now": 1793361600.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": true,
+            "code": "applied",
+            "delta": -8,
+            "score": 641,
+            "entry": {
+              "event_key": "natural_decay:2026-10-30",
+              "reason_code": "natural_decay",
+              "delta": -8,
+              "score_before": 649,
+              "score_after": 641,
+              "created_at": 1793361600.0,
+              "inactive_days": 41
+            }
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": 641,
+            "relationship_ledger": [
+              {
+                "event_key": "natural_decay:2026-10-29",
+                "reason_code": "natural_decay",
+                "delta": -251,
+                "score_before": 900,
+                "score_after": 649,
+                "created_at": 1793275200.0,
+                "inactive_days": 40
+              },
+              {
+                "event_key": "natural_decay:2026-10-30",
+                "reason_code": "natural_decay",
+                "delta": -8,
+                "score_before": 649,
+                "score_after": 641,
+                "created_at": 1793361600.0,
+                "inactive_days": 41
+              }
+            ],
+            "relationship_last_effective_at": 1789819200.0,
+            "relationship_last_decay_stage_drop_at": 1793275200.0,
+            "relationship_decay_settled_day": "2026-10-30"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "decay",
+      "score": -20,
+      "cases": [
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": -20,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          },
+          "arguments": {
+            "now": 1793275200.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "non_positive_score",
+            "delta": 0,
+            "score": -20
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": -20,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": -20,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          },
+          "arguments": {
+            "now": 1793275210.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "non_positive_score",
+            "delta": 0,
+            "score": -20
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": -20,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          }
+        },
+        {
+          "before": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": -20,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          },
+          "arguments": {
+            "now": 1793361600.0,
+            "timezone_name": "Asia/Shanghai"
+          },
+          "result": {
+            "changed": false,
+            "code": "non_positive_score",
+            "delta": 0,
+            "score": -20
+          },
+          "after": {
+            "relationship_role": "owner",
+            "relationship_mode": "normal",
+            "relationship_score": -20,
+            "relationship_ledger": [],
+            "relationship_last_effective_at": 1789819200.0
+          }
+        }
+      ]
+    }
+  ]
+}

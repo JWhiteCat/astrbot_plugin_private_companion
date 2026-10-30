@@ -195,7 +195,7 @@ class CoreReplyToolSession:
                             action=spec.action, observed_at=app.tasks.now()).is_success:
                         offered.append(_OfferedTool(spec, "agenda"))
             memory = getattr(tools, "memory", None)
-            if memory is not None and not tools._memory_is_external():
+            if memory is not None:
                 offered.extend(_OfferedTool(spec, "memory") for spec in memory.catalog_for(context))
             calendar = getattr(tools, "calendar", None)
             if calendar is not None:

@@ -149,20 +149,22 @@ class MemoryOwnershipTests(HostFixture, unittest.IsolatedAsyncioTestCase):
         return self.host(memory_owner=owner, **changes)
 
     def seed_private_fact(self, app, batch):
-        """在事件被受理之后、生成之前写入一条私聊事实。
-
-        写入走的是 V2 自己的记忆域，所以它同时证明「让位只关表达、不关存储」：
-        同一个库在两种归属下都在长。
-        """
+        """Seed existing local history before external ownership takes effect."""
 
         context = self.context(app, batch)
         row = app.runtime.read_one(
             "SELECT event_json FROM conversation_inputs WHERE batch_id = ? ORDER BY event_key LIMIT 1", (batch,))
         source = codec.source(json.loads(row["event_json"])["source"])
         evidence = app.memory.writer.access.capture(context, source)
-        return app.memory.writer.submit(context, Proposal(
-            "add", predicate="饮用偏好", object="不喝咖啡", representation="用户明确说自己不喝咖啡。",
-            evidence=(evidence,), single_value=True), operation_key="ownership-seed").unwrap()
+        owner = app.memory.owner
+        try:
+            # Seed historical data before activating the external owner.
+            app.memory.owner = DEFAULT_MEMORY_OWNER
+            return app.memory.writer.submit(context, Proposal(
+                "add", predicate="饮用偏好", object="不喝咖啡", representation="用户明确说自己不喝咖啡。",
+                evidence=(evidence,), single_value=True), operation_key="ownership-seed").unwrap()
+        finally:
+            app.memory.owner = owner
 
     def read_private_fact(self, app, batch, receipt):
         return app.memory.writer.read(self.context(app, batch), AtomRef(receipt["atom_id"], 1)).unwrap()
@@ -194,15 +196,36 @@ class MemoryOwnershipTests(HostFixture, unittest.IsolatedAsyncioTestCase):
         second = host.receive(self.event("after", text="我平时喝咖啡吗？")).unwrap()
         self.assertEqual((await self.complete(app, second))["state"], "complete")
 
-        # 事实确实在 V2 库里（让位不关存储），但这一轮的提示词里没有它。
+        # Existing history remains readable; it is not a second live recall source.
         self.assertEqual(self.read_private_fact(app, second, saved)["object"], "不喝咖啡")
         envelope = self.envelope(app, second)
         self.assertFalse([item for item in envelope.original.context.materials if item.owner == "memory"],
                          "delegation must not inject any memory material")
         self.assertNotIn(MEMORY_INSTRUCTION, envelope.original.instruction)
 
-        # 交给模型的那份工具清单里一个 memory.* 都没有。
-        self.assertEqual([tool.action for tool in envelope.tools if tool.action.startswith("memory.")], [])
+        # Only the historical read-only tool remains in the actual model catalog.
+        self.assertEqual([tool.action for tool in envelope.tools if tool.action.startswith("memory.")], ["memory.legacy.query"])
+
+    async def test_external_owner_blocks_direct_and_administrative_live_writes_but_keeps_history_tools(self):
+        from companion_v2.execution.models import TaskError
+        from companion_v2.memory.management import MemoryManagement
+
+        host = await self.start(self.host_with(external()))
+        app = host.application
+        batch = host.receive(self.event("delegated-read", text="查一下旧记录")).unwrap()
+        context = self.context(app, batch)
+        for access in (app.memory.writer.access, MemoryManagement(app.memory, None).writer.access):
+            with self.assertRaisesRegex(TaskError, "external provider"):
+                access.check(context, "memory.propose")
+            with self.assertRaises(TaskError):
+                access.check(context, "memory.reflect")
+        result, receipt = app.tools.memory.execute(context, batch, "historical-query", "memory.legacy.query",
+                                                  {"query_intent": "旧记录"})
+        self.assertEqual(result["state"], "succeeded")
+        self.assertIsNone(receipt)
+        self.assertEqual(app.runtime.read_one("SELECT COUNT(*) FROM memory_atoms", ())[0], 0)
+        with self.assertRaises(TaskError):
+            app.tools.memory.execute(context, batch, "stale-tool", "memory.query", {"query_intent": "new"})
 
     # ── 2. 牢插件不在：和以前完全一样 ───────────────────────────────
 
@@ -289,7 +312,7 @@ class MemoryOwnershipTests(HostFixture, unittest.IsolatedAsyncioTestCase):
         await self.done(delegated_app, batch)
         delegated_context = self.context(delegated_app, batch)
         self.assertEqual([tool.action for tool in delegated_app.tools.catalog_for(delegated_context)
-                          if tool.action.startswith("memory.")], [])
+                          if tool.action.startswith("memory.")], ["memory.legacy.query"])
 
     async def test_tool_catalog_keeps_memory_when_v2_owns_it(self):
         own_host = await self.start(self.host_with(DEFAULT_MEMORY_OWNER,

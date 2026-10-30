@@ -29,6 +29,16 @@ class GroupMemoryAccess:
         self.messages, self.tasks, self.runtime = messages, messages.tasks, messages.runtime
 
     def check(self, context, capability="group.memory.read", *, at=None):
+        memory_context = self.messages.memory_context
+        if (
+            capability == "group.memory.write"
+            and memory_context is not None
+            and memory_context.delegated()
+        ):
+            raise TaskError(
+                "memory_access_denied",
+                "live group memory belongs to the external provider",
+            )
         if capability not in CAPABILITIES or context.scope.kind is not ScopeKind.GROUP:
             raise TaskError("group_memory_context_required", "group memory requires its collective group context")
         at = at or self.tasks.now()

@@ -66,6 +66,27 @@ class GroupMemoryTests(GroupFixture, unittest.IsolatedAsyncioTestCase):
     def materials(self, context, batch):
         return self.app.messages._request(self.app.messages.batch(batch), context, self.clock.now()).context.materials
 
+    async def test_external_owner_removes_live_group_context_and_mutations_but_keeps_historical_reader(self):
+        from tests.test_memory_ownership import external
+
+        await self.start_host()
+        _, _, receipt = await self.save()
+        self.app.memory.owner = external()
+        context, batch = await self.receive("查询此前群资料")
+        self.assertFalse(any(item.purpose == "group_memory" for item in self.materials(context, batch)))
+        catalog = self.app.tools.group_memory.catalog_for(context)
+        self.assertEqual([tool.action for tool in catalog], ["group.memory.legacy.query"])
+        result, operation = self.app.tools.group_memory.execute(context, batch, "history",
+            "group.memory.legacy.query", {"query": "群资料"})
+        self.assertEqual(result["state"], "succeeded")
+        self.assertIsNone(operation)
+        with self.assertRaises(TaskError):
+            self.memory.access.check(context, "group.memory.write")
+        with self.assertRaises(TaskError):
+            self.app.tools.group_memory.execute(context, batch, "stale", "group.memory.remember",
+                {"input_handle": "group-input-1", "statement": "new local fact"})
+        self.assertEqual(self.memory.read(context, receipt["memory_id"], 1)[0]["statement"], "周六在公园集合")
+
     async def test_member_statement_is_shared_and_grounded_without_private_source_access(self):
         await self.start_host()
         self.enable_group_reactions()
@@ -131,10 +152,10 @@ class GroupMemoryTests(GroupFixture, unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.memory.query(current)["items"], [])
             with self.assertRaises(TaskError):
                 self.memory.read(current, receipt["memory_id"], 1)
-        self.native.selections["qq-main:GroupMessage:300"] = "second"
+        self.window_personas["qq-main:GroupMessage:300"] = "second"
         b, _ = await self.receive()
         self.assertEqual(self.memory.query(b)["items"], [])
-        self.native.selections["qq-main:GroupMessage:300"] = "original"
+        self.window_personas["qq-main:GroupMessage:300"] = "original"
         self.native.conversations["qq-main:GroupMessage:300"] = "reset-native-conversation"
         returned, batch = await self.receive(sender="201")
         self.assertNotEqual(returned.scope.conversation_id, a.scope.conversation_id)

@@ -22,6 +22,7 @@ class MemoryManagement:
         self.memory, self.operator = memory, operator
         self.writer = MemoryWriter(memory.tasks, policy=memory.policy, operator=operator, settings=memory.settings)
         self.writer.access.sent_sources = memory.writer.access.sent_sources
+        self.writer.access.live_memory_delegated = memory.delegated
 
     def token(self, context, reference):
         return digest([context.key, self.operator, reference, self.writer.access.access.revision])

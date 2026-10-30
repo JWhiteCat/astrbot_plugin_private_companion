@@ -655,6 +655,18 @@ class MultiHostSession:
                     result = require(self.host.receive(captured, on_admitted=admitted))
                 self._record_platform_names(event, context)
                 if context.scope.kind is ScopeKind.PRIVATE:
+                    from companion_v2.memory.private_legacy_import import (
+                        update_private_relationship,
+                    )
+
+                    update_private_relationship(
+                        self.application.memory.query.legacy,
+                        context,
+                        1,
+                        reason_code="inbound",
+                        event_id=captured.event_id,
+                        observed_at=captured.at,
+                    )
                     self.application.life_runtime.bind(context, captured.instruction, guard=self.bridge.verify_role)
                     self.application.state_maintenance.bind(context, captured.instruction, guard=self.bridge.verify_role)
                     self.application.contact_schedule.bind_context(context)
@@ -908,6 +920,19 @@ class MultiHostSession:
                     context = self._select_core_reply_context(target, captured)
                 self._validate_core_group_admission(group_admission, context, captured)
                 turn_id = "core-reply:" + digest([context.key, captured.event_id])
+                if context.scope.kind is ScopeKind.PRIVATE:
+                    from companion_v2.memory.private_legacy_import import (
+                        update_private_relationship,
+                    )
+
+                    update_private_relationship(
+                        self.application.memory.query.legacy,
+                        context,
+                        1,
+                        reason_code="inbound",
+                        event_id=captured.event_id,
+                        observed_at=captured.at,
+                    )
                 presence = self.application.presence
                 if presence is not None:
                     typing_context, typing_turn = context, turn_id

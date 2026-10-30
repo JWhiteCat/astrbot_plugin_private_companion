@@ -20,11 +20,20 @@ class MemoryAccess:
         self.access = ObjectAccessPolicy(self.runtime)
         self.personas = PersonaDirectory(self.runtime)
         self.sent_sources = None
+        self.live_memory_delegated = None
 
     def policy_for(self, context):
         return self.settings.policy(context) if self.settings else self.policy
 
     def check(self, context, action="memory.read", *, at=None):
+        if (
+            action not in {"memory.read", "memory.manage"}
+            and self.live_memory_delegated is not None
+            and self.live_memory_delegated()
+        ):
+            raise TaskError(
+                "memory_access_denied", "live memory belongs to the external provider"
+            )
         if (context.scope.kind is not ScopeKind.PRIVATE
                 or context.audience.recipients != (context.actor.subject,)):
             raise TaskError("memory_private_context_required", "private memory requires its original private audience")

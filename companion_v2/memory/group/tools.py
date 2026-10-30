@@ -44,6 +44,14 @@ class GroupMemoryTools:
             self.memory.access.check(context)
         except TaskError:
             return ()
+        memory_context = self.messages.memory_context
+        if memory_context is not None and memory_context.delegated():
+            return tuple(
+                t
+                for t in self.catalog
+                if t.action == "group.memory.legacy.query"
+                and self.legacy_memory is not None
+            )
         try:
             self.memory.access.check(context, "group.memory.write")
         except TaskError:
@@ -94,7 +102,7 @@ class GroupMemoryTools:
             if self.legacy_memory is None:
                 raise TaskError("group_memory_tool_unavailable", "historical memory reader is unavailable")
             self.memory.access.check(context, "group.memory.read")
-            self.legacy_memory.query.legacy.verify(context, payload["items"])
+            self.legacy_memory.query.legacy.verify(context, payload["items"], group_read_authorized=True)
             return result, None
         else:
             identifier = (json.loads(row["arguments_json"])["operation_id"] if row["action"] == "group.memory.operation"
@@ -118,7 +126,7 @@ class GroupMemoryTools:
 
     def augment(self, batch, context, request, at):
         materials = list(request.context.materials)
-        if self.catalog_for(context):
+        if any(t.action in self.mutations for t in self.catalog_for(context)):
             materials.append(PromptMaterial(OWNER, "group_memory_input_handles",
                 encode(list(self.memory.access.offered(context, batch["batch_id"])))))
         visible = []
@@ -129,5 +137,14 @@ class GroupMemoryTools:
                 materials.extend(sources if isinstance(sources, tuple) else (sources,))
         if visible:
             materials.append(PromptMaterial("conversation.tools", "actual_tool_results", encode(visible)))
-        return replace(request, context=replace(request.context, materials=tuple(materials)),
-                       instruction=request.instruction + "\n" + INSTRUCTION)
+        owner = self.messages.memory_context
+        instruction = (
+            "Historical memory queries are read-only imported records, not current facts."
+            if owner is not None and owner.delegated()
+            else INSTRUCTION
+        )
+        return replace(
+            request,
+            context=replace(request.context, materials=tuple(materials)),
+            instruction=request.instruction + "\n" + instruction,
+        )

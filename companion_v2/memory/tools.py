@@ -74,6 +74,8 @@ class MemoryTools:
     def catalog_for(self, context):
         available = []
         for tool in self.catalog:
+            if self.memory.delegated() and tool.action != "memory.legacy.query":
+                continue
             try:
                 self.memory.writer.access.check(context)
                 self.memory.writer.access.check(context, ACTIONS[tool.action][0])
@@ -83,11 +85,19 @@ class MemoryTools:
         return tuple(available)
 
     def execute(self, context, batch_id, call_id, action, arguments, *, prepared=None):
+        if self.memory.delegated() and action != "memory.legacy.query":
+            raise TaskError(
+                "memory_access_denied", "live memory belongs to the external provider"
+            )
         permission, required, optional = ACTIONS[action]
         if type(arguments) is not dict or not set(required).issubset(arguments) or set(arguments) - set(required) - set(optional):
             raise ValueError("memory tool arguments do not match the registered profile")
         self.memory.writer.access.check(context, permission)
         session_id = "memory:" + batch_id
+        if action == "memory.legacy.query":
+            # Historical imports remain readable without opening a live memory
+            # snapshot or accepting new evidence into the local store.
+            self.memory.query.begin(context, session_id)
         self.memory.query._session(context, session_id)
         writer, query = self.memory.writer, self.memory.query
         key = batch_id + ":" + call_id
@@ -95,6 +105,11 @@ class MemoryTools:
             result = require(query.query(context, session_id, **arguments, **(prepared or {})))
         elif action == "memory.legacy.query":
             result = require(query.legacy_materials(context, session_id, **arguments))
+            from .private_legacy_import import read_private_continuity
+
+            continuity = read_private_continuity(query.legacy, context)
+            if continuity is not None:
+                result["continuity"] = continuity
         elif action == "memory.sources":
             result = require(query.source(context, session_id, **arguments))
         elif action == "memory.proposal.submit":

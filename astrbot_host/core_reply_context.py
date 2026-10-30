@@ -462,6 +462,47 @@ def build_core_reply_prompt(application, context, native_input, *, at, keyword_m
             "不恢复旧任务或授权，也不当作当前状态；结合本轮表达自然回忆，需要更多细节时继续查询历史记忆。",
             _legacy_memory_materials(getattr(application, "memory", None), context, native_input, at,
                                      perception_settings()["calendar_timezone"])))
+
+        def legacy_relationship():
+            from companion_v2.memory.private_legacy_import import (
+                read_private_continuity,
+            )
+
+            continuity = read_private_continuity(
+                application.memory.query.legacy, context
+            )
+            if not continuity:
+                return ""
+            relationship = continuity.get("relationship", {})
+            fields = {
+                key: relationship[key]
+                for key in (
+                    "relationship_score",
+                    "relationship_role",
+                    "relationship_mode",
+                )
+                if key in relationship
+            }
+            fields["ledger_entries"] = len(
+                relationship.get("relationship_ledger") or ()
+            )
+            fields["source_fingerprint"] = continuity.get("source_fingerprint", "")
+            material = ContextContribution(
+                "legacy-private-relationship",
+                "legacy.users",
+                "relationship_continuity",
+                ContributionState.READY,
+                encode(fields),
+                None,
+                True,
+            )
+            return _material_section(
+                "迁入的相处状态",
+                "这些是旧版 users 记录保留的关系数值与身份，不证明升级后自动进展已实现。",
+                (material,),
+            )
+
+        optional("legacy_relationship", legacy_relationship)
         captured("relationship", "相处背景", RELATIONSHIP_INSTRUCTION,
                  getattr(messages, "relationship_context", None))
         captured("life", "角色生活", LIFE_INSTRUCTION, getattr(messages, "life_context", None))

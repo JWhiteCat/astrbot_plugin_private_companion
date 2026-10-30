@@ -529,7 +529,21 @@ class AstrBotStagingSession:
             self.application.require_running()
             self.require_intake_authorization()
             self._configuration()
-            return self.host.receive(captured)
+            result = self.host.receive(captured)
+            if result.is_success:
+                from companion_v2.memory.private_legacy_import import (
+                    update_private_relationship,
+                )
+
+                update_private_relationship(
+                    self.application.memory.query.legacy,
+                    target,
+                    1,
+                    reason_code="inbound",
+                    event_id=captured.event_id,
+                    observed_at=captured.at,
+                )
+            return result
         except TaskError as error:
             return Outcome.failed(error.code, str(error))
 
