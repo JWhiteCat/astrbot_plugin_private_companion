@@ -407,6 +407,7 @@ class MultiHostSession:
             persona_window_snapshot_lookup=persona_window_snapshot_lookup,
             persona_window_snapshot_update=persona_window_snapshot_update,
             file_settings=lambda scope, role: file_intake_settings(runtime, scope, role))
+        self.bridge.memory_runtime = runtime
         self.model = AstrBotTextProvider(native_context, bridge=self.bridge,
             binding=ProviderBinding("model.text", common.provider_id, native_types.version, provider_fingerprint),
             provider_id=common.provider_id, version=native_types.version, provider_type=native_types.provider,
@@ -458,28 +459,45 @@ class MultiHostSession:
         registry_ids = {item.field_id for item in registry_fields}
         registry_fields += tuple(field for field in relay_configuration_fields()
                                  if field.field_id not in registry_ids)
-        self.host = AstrBotCompanionHost(runtime, event_port=self.bridge.ports, identity_port=self.bridge.ports,
-            role_port=self.bridge.ports, runtime_identity=RuntimeIdentity("companion", runtime_instance_id, "astrbot", HOST_ID),
+        self.host = AstrBotCompanionHost(
+            runtime,
+            event_port=self.bridge.ports,
+            identity_port=self.bridge.ports,
+            role_port=self.bridge.ports,
+            runtime_identity=RuntimeIdentity(
+                "companion", runtime_instance_id, "astrbot", HOST_ID
+            ),
             registry=FieldRegistry(version="astrbot-multi.v1", fields=registry_fields),
-            profiles=profiles, providers=tuple(model.local_provider() for model in self.models), budget=common.budget,
+            profiles=profiles,
+            providers=tuple(model.local_provider() for model in self.models),
+            budget=common.budget,
             budget_soft=common.budget_soft,
             default_provider_resolver=conversation_provider_resolver(native_context),
-            sender=LocalSender(self.sender_binding, self.send, supports_images=True, supports_poke=True), policy=common.policy, limits=common.limits, now=now,
-            tool_port=tool_port, segmentation=common.segmentation,
+            sender=LocalSender(
+                self.sender_binding, self.send, supports_images=True, supports_poke=True
+            ),
+            policy=common.policy,
+            limits=common.limits,
+            now=now,
+            tool_port=tool_port,
+            segmentation=common.segmentation,
             # 记忆归属读的是别家插件自己公开的声明；跨插件读取只在这一个适配函数里，
             # 核心不反向导入宿主包。写入端口复用同一条发现路径：日记、梦境与主动
             # 消息完成后推给当前对外表达记忆的一方，失败不影响已完成的领域动作。
-            memory_owner=memory_owner_provider(native_context),
-            memory_push=memory_push_provider(native_context),
+            memory_owner=memory_owner_provider(native_context, runtime=runtime),
+            memory_push=memory_push_provider(native_context, bridge=self.bridge),
             weather_port=weather_port,
             weather_alert_port=weather_alert_port,
             balance_port=balance_port,
             news_port=news_port,
             solar_term_port=solar_term_port,
             qzone_transport=qzone_transport,
-            voice_policy=common.voice_reply_policy if common.voice_reply_enabled else None,
+            voice_policy=common.voice_reply_policy
+            if common.voice_reply_enabled
+            else None,
             wake_port=self._wake_snapshot,
-            presence_port=MultiPresence(self))
+            presence_port=MultiPresence(self),
+        )
         self.application = self.host.application
         if hasattr(self.application, "contact_schedule"):
             self.application.contact_schedule.bind_health_source(self.huawei_health)
@@ -654,6 +672,13 @@ class MultiHostSession:
                                     mentioned=group_admission["mentioned"])
                     result = require(self.host.receive(captured, on_admitted=admitted))
                 self._record_platform_names(event, context)
+                from companion_v2.adapters.astrbot.memory_owner import (
+                    record_native_memory_identity,
+                )
+
+                await record_native_memory_identity(
+                    self.runtime, self.bridge, event, context
+                )
                 if context.scope.kind is ScopeKind.PRIVATE:
                     from companion_v2.memory.private_legacy_import import (
                         update_private_relationship,
@@ -920,6 +945,13 @@ class MultiHostSession:
                     context = self._select_core_reply_context(target, captured)
                 self._validate_core_group_admission(group_admission, context, captured)
                 turn_id = "core-reply:" + digest([context.key, captured.event_id])
+                from companion_v2.adapters.astrbot.memory_owner import (
+                    record_native_memory_identity,
+                )
+
+                await record_native_memory_identity(
+                    self.runtime, self.bridge, event, context
+                )
                 if context.scope.kind is ScopeKind.PRIVATE:
                     from companion_v2.memory.private_legacy_import import (
                         update_private_relationship,

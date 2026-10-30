@@ -32,7 +32,7 @@ from companion_v2.execution.runner import ExactTaskRunner, RunResult
 from companion_v2.execution.service import outcome
 from companion_v2.expression.configuration import read_settings as expression_settings
 from companion_v2.foundation.outcome import Outcome
-from companion_v2.foundation.refs import OperationRef, VersionRef, normalize_utc
+from companion_v2.foundation.refs import OperationRef, ScopeKind, VersionRef, normalize_utc
 from companion_v2.model_gateway.models import ModelTaskProfile
 from companion_v2.relationships.private_access import REVOCABLE_ABSENCE_CODES
 from companion_v2.role_work.state import humanized
@@ -138,6 +138,7 @@ class ProactiveContacts:
         self.expression_context = self.expression_review = None
         self.persona_judge = PersonaJudge(self.runtime)
         self._pending, self._invocations = {}, set()
+        self._memory_pushes = {}
         self._closed = False
         self.gateway = self.runner = self.generation = self.judge_runner = None
         self.registrations = (TaskRegistration(TaskDefinition(CONTACT_KIND, GROUP, GROUP, Lane.BACKGROUND,
@@ -1075,11 +1076,7 @@ class ProactiveContacts:
                         job.intent.thought.opportunity.opened_at)))
                 run.record_operation(operation.operation_id)
             self.notify()
-            # ``body is not None and judge_task is None`` 恰好就是「事务里刚把这条消息
-            # 排进投递」：待判定的分支只提交草稿，而重复检查一旦命中就把 body 置空。
-            # 推送放在事务之外，不在 SQLite 写事务里 await 别家插件的写入。
-            if body is not None and judge_task is None:
-                await self._push_contact(job.context, contact_id, body, job.intent.purpose)
+            # Memory publication waits for an actual platform delivery receipt.
             return TaskResult("succeeded", effect="committed", result_ref=contact_id if body is not None else "contact-skipped:" + contact_id,
                               operation_id=operation.operation_id, receipt_ref=operation.operation_id)
         except BaseException:
@@ -1153,6 +1150,19 @@ class ProactiveContacts:
             if (original.part_count != len(parts) or original.sequence >= len(parts)
                     or original.payload_hash != parts[original.sequence]["payload_hash"]):
                 raise TaskError("contact_draft_unavailable", "confirmed contact part no longer matches its draft")
+            push_key = "external_memory_delivery:" + delivery_id
+            if (not self._closed and delivery_id not in self._memory_pushes
+                    and self.runtime.read_one("SELECT 1 FROM runtime_metadata WHERE key = ?", (push_key,)) is None):
+                # Each confirmed part has its own durable identity; uncertain or
+                # rejected sends must never become an external visible turn.
+                with self.runtime.transaction() as connection:
+                    connection.execute("INSERT INTO runtime_metadata (key, value) VALUES (?, ?)",
+                        (push_key, encode({"state": "attempted", "delivery_id": delivery_id})))
+                task = asyncio.create_task(self._push_contact(original.context, original.source_ref,
+                    parts[original.sequence]["text"], data.get("purpose"), delivery_id=delivery_id,
+                    occurred_at=delivered["delivered_at"]))
+                self._memory_pushes[delivery_id] = task
+                task.add_done_callback(lambda _task: self._memory_pushes.pop(delivery_id, None))
             opened_at = datetime.fromisoformat(data["opened_at"])
             deadline = datetime.fromisoformat(data["expires_at"])
             if original.sequence == 0 and data.get("expression_style") is not None and self.expression_context is not None:
@@ -1246,6 +1256,18 @@ class ProactiveContacts:
 
     @outcome
     def validate_judge(self, spec, at):
+        """Validate a sealed draft or this task's completed judgement receipt.
+
+        Args:
+            spec: Judge task specification tied to the original sealed contact.
+            at: Observation time supplied by the task supervisor.
+
+        Returns:
+            True when the draft or its committed judgement belongs to this task.
+
+        Raises:
+            TaskError: The draft is unavailable or has no matching commit receipt.
+        """
         self.require_running()
         if spec.kind != JUDGE_KIND or not spec.idempotency_key:
             raise TaskError("contact_judge_unavailable", "judgement must retain its sealed draft")
@@ -1254,8 +1276,16 @@ class ProactiveContacts:
         if row is None or row["origin_key"] != spec.context.key:
             raise TaskError("contact_judge_unavailable", "judgement draft is unavailable")
         data = json.loads(row["record_json"])
-        if data.get("decision") != "judge_pending" or (data.get("judge") or {}).get("task_id") != spec.task_id:
+        judge = data.get("judge") or {}
+        if judge.get("task_id") != spec.task_id:
             raise TaskError("contact_judge_unavailable", "draft already has a resolved judgement")
+        if data.get("decision") != "judge_pending":
+            # Completion revalidates inputs after the verdict's transaction commits.
+            receipt = self.operations.get("save-" + spec.task_id)
+            if (data.get("decision") not in ("send", "skip") or judge.get("state") != "resolved"
+                    or receipt.failure or receipt.unwrap().state is not OperationState.COMPLETED
+                    or receipt.unwrap().parameter_hash != digest([spec.idempotency_key, judge])):
+                raise TaskError("contact_judge_unavailable", "draft has no matching judgement commit receipt")
         return True
 
     async def _judge_generate(self, run):
@@ -1303,6 +1333,8 @@ class ProactiveContacts:
             raise
         threshold = preferences.values["proactive_persona_judge_threshold"]
         allowed = decision == "send" and score >= threshold
+        operation = OperationRef("save-" + run.task.task_id, GROUP, context.scope,
+                                 VersionRef(run.task.task_id, 1), run.task.task_id)
         with self.runtime.transaction() as connection:
             run.validate()
             current = connection.execute("""SELECT record_json FROM proactive_contacts
@@ -1317,6 +1349,8 @@ class ProactiveContacts:
                                  "model_call_id": completion.call_id, "failure": None}
             document["skip_reason"] = None if allowed else "persona_review"
             run.begin_effect()
+            require(self.operations.reserve(operation,
+                parameter_hash=digest([contact_id, document["judge"]]), observed_at=self.tasks.now()))
             connection.execute("UPDATE proactive_contacts SET record_json = ? WHERE contact_id = ?",
                                (encode(document), contact_id))
             if not allowed and isinstance(origin, dict):
@@ -1328,39 +1362,45 @@ class ProactiveContacts:
             if allowed:
                 require(self.delivery.queue(self._part_request(contact_id, context, document, 0,
                     datetime.fromisoformat(document["opened_at"]))))
+            require(self.operations.transition(operation.operation_id, expected_state=OperationState.ACCEPTED,
+                next_state=OperationState.COMPLETED, observed_at=self.tasks.now()))
+            run.record_operation(operation.operation_id)
         self.notify()
-        if allowed:
-            # 判定放行与直接发送是同一件事的两条互斥分支：草稿在此之前一直压着不发，
-            # 现在它才真的排进投递，因此也在这里才写进记忆。反过来，把未获准的草稿
-            # 提前推过去，会让牢插件记得一句角色从没说过的话。
-            await self._push_contact(context, contact_id, row["body"], data.get("purpose"))
         return TaskResult("succeeded", effect="committed", result_ref=contact_id,
-                          receipt_ref="proactive-judgement:" + run.task.task_id)
+                          operation_id=operation.operation_id, receipt_ref=operation.operation_id)
 
-    async def _push_contact(self, context, contact_id, body, purpose):
-        """把刚排进投递的主动消息推给对外表达记忆的一方；失败不影响这次投递。
+    async def _push_contact(self, context, contact_id, body, purpose, *, delivery_id, occurred_at):
+        """Publish a confirmed part without changing its platform receipt.
 
-        身份取自 ``contact_id``（它本来就是 ``digest(task_id)`` 的持久身份）：同一条
-        草稿无论被重放几次，牢插件看到的都是同一个 ``memory_id``。
+        Args:
+            context: Original authenticated recipient and persona.
+            contact_id: Persisted proactive contact identity.
+            body: Text in this confirmed delivery part.
+            purpose: Original contact purpose.
+            delivery_id: Stable platform dispatch identity used for deduplication.
+            occurred_at: Timestamp from the trusted delivery receipt.
         """
 
         scope = context.scope
         record = MemoryPushRecord(
-            memory_id=push_memory_id(PUSH_PROACTIVE_MESSAGE, "proactive", contact_id),
+            memory_id=push_memory_id(PUSH_PROACTIVE_MESSAGE, "proactive", contact_id, delivery_id),
             content=f"Bot 主动联系对方时说：{body}",
             kind=PUSH_PROACTIVE_MESSAGE,
             scope=_push_scope(scope.kind),
-            # V2 的核心没有平台会话 id，只有 ScopeRef；用 V2 自己的稳定命名空间，
-            # 并且带上这一轮的原生会话，避免不同窗口的主动消息互相覆盖。
-            session_id="private_companion_v2:proactive:" + (scope.native_scope_id or scope.conversation_id or "role"),
+            bot_id=scope.account_id or "",
+            persona_id=context.role_binding.role.subject_id,
+            original_context=context,
+            user_id=scope.native_scope_id if scope.kind is ScopeKind.PRIVATE else "",
+            group_id=scope.native_scope_id if scope.kind is ScopeKind.GROUP else "",
             platform=scope.platform,
-            occurred_at=self.tasks.now().isoformat(),
+            occurred_at=occurred_at,
             tags=("proactive", "proactive_message", "bot_action"),
             metadata=(
                 ("event_type", "proactive_message"),
                 ("action_label", "主动私聊"),
                 ("purpose", purpose or ""),
                 ("contact_id", contact_id),
+                ("delivery_id", delivery_id),
                 # 牢插件用这段正文写它自己的可见时间线，必须是真正发出去的那句话。
                 ("clean_visible_text", body),
                 ("query_anchors", ["主动消息", "主动私聊", "刚才主动说了什么", "最近主动联系"]),
@@ -1368,7 +1408,19 @@ class ProactiveContacts:
             confidence=0.92,
             importance=0.58,
         )
-        await push_memory(self.memory_push, record)
+        result = None
+        try:
+            result = await push_memory(self.memory_push, record)
+        finally:
+            try:
+                with self.runtime.transaction() as connection:
+                    connection.execute("INSERT OR REPLACE INTO runtime_metadata (key, value) VALUES (?, ?)",
+                        ("external_memory_delivery:" + delivery_id, encode({
+                            "state": "confirmed" if result else "unknown", "delivery_id": delivery_id,
+                            "memory_id": result or ""})))
+            except Exception as error:
+                logger.warning("External memory delivery receipt could not be recorded error_type=%s",
+                               type(error).__name__)
 
     def outstanding_judgements(self, *, limit=8):
         """Sealed drafts waiting for their judgement, oldest first."""
@@ -1516,7 +1568,8 @@ class ProactiveContacts:
     def active_handles(self):
         return ((self.runner.active_handles if self.runner else ())
                 + (self.judge_runner.active_handles if self.judge_runner else ())
-                + tuple("contact-invocation-" + str(id(t)) for t in self._invocations))
+                + tuple("contact-invocation-" + str(id(t)) for t in self._invocations)
+                + tuple("contact-memory-" + key for key in self._memory_pushes))
 
     def _delivery_row(self, task_id):
         rows = self._delivery_rows(task_id)
@@ -1641,7 +1694,7 @@ class ProactiveContacts:
         return require(self.observe(context, task_id))
 
     def cancel_running(self):
-        for task in tuple(self._invocations):
+        for task in (*tuple(self._invocations), *tuple(self._memory_pushes.values())):
             task.cancel()
 
     async def close(self):
@@ -1651,5 +1704,6 @@ class ProactiveContacts:
             await self.runner.close()
         if self.judge_runner is not None:
             await self.judge_runner.close()
-        if self._invocations:
-            await asyncio.wait(tuple(self._invocations), timeout=0.25)
+        pending = (*tuple(self._invocations), *tuple(self._memory_pushes.values()))
+        if pending:
+            await asyncio.wait(pending, timeout=0.25)

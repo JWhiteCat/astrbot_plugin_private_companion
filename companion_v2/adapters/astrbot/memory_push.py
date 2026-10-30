@@ -17,8 +17,12 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
-from companion_v2.adapters.astrbot.memory_owner import read_memory_owner
+from companion_v2.adapters.astrbot.memory_owner import (
+    native_memory_identity,
+    read_memory_owner,
+)
 from companion_v2.capabilities.memory_push import (
     PUSH_PERSONA_LIFE,
     PUSH_PROACTIVE_MESSAGE,
@@ -48,10 +52,28 @@ BRIDGE_METHODS = {
 class AstrBotMemoryPush:
     """窄端口实现：探一次句柄，调一个 ``record_*``，别的什么都不做。"""
 
-    def __init__(self, context=None):
+    def __init__(self, context=None, *, bridge=None):
         self._context = context
+        self._bridge = bridge
 
     async def push(self, record: MemoryPushRecord) -> str | None:
+        if self._bridge is not None:
+            if record.original_context is None:
+                return None
+            original = record.original_context
+            persona = await self._bridge.verified_persona(
+                original.scope, original.role_binding
+            )
+            identity = native_memory_identity(
+                self._context,
+                original.scope,
+                persona_id=str(persona.get("persona_id") or ""),
+                runtime=getattr(self._bridge, "memory_runtime", None),
+            )
+            record = replace(record, **identity)
+        if not record.bot_id or not record.persona_id:
+            # Never publish an unowned bot-self record into a shared store.
+            return None
         owner = read_memory_owner(self._context)
         if not owner.ownership.delegated or owner.handle is None:
             # 牢插件不在／被停用／句柄读不到：当场放弃，不缓冲也不重试。V2 自己的库
@@ -63,7 +85,38 @@ class AstrBotMemoryPush:
             # 也不退回写它的其它 API。
             return None
         result = await method(content=_content(record), **self._arguments(record))
-        return result if isinstance(result, str) and result else None
+        if not isinstance(result, str) or not result:
+            return None
+        visible = getattr(owner.handle, "record_visible_turn", None)
+        if record.kind == PUSH_PROACTIVE_MESSAGE:
+            if not callable(visible):
+                logger.warning("External memory visible-turn API is unavailable")
+                return None
+            metadata = dict(record.metadata)
+            metadata.update(
+                bot_id=record.bot_id,
+                owner_bot_id=record.bot_id,
+                persona_id=record.persona_id,
+            )
+            visible_result = await visible(
+                role="assistant",
+                content=str(metadata.get("clean_visible_text") or ""),
+                scope=record.scope,
+                session_id=record.session_id or self._arguments(record)["session_id"],
+                platform=record.platform,
+                user_id=record.user_id,
+                group_id=record.group_id,
+                message_id=record.memory_id,
+                source="private_companion_proactive",
+                metadata=metadata,
+                occurred_at=record.occurred_at,
+            )
+            if not isinstance(visible_result, str) or not visible_result:
+                # The primary write may already exist. Leave the durable
+                # delivery fence unknown so reconciliation cannot replay it.
+                logger.warning("External memory visible turn was not confirmed")
+                return None
+        return result
 
     @staticmethod
     def _arguments(record: MemoryPushRecord) -> dict:
@@ -77,7 +130,36 @@ class AstrBotMemoryPush:
             "platform": record.platform,
             "tags": list(record.tags),
             "metadata": dict(record.metadata),
+            "subject": {"kind": "bot", "id": record.bot_id, "role": "bot_self"},
         }
+        arguments["metadata"].update(
+            owner_bot_id=record.bot_id, persona_id=record.persona_id
+        )
+        if record.scope == "private" and record.platform and record.user_id:
+            arguments["session_id"] = (
+                record.session_id or f"{record.platform}:FriendMessage:{record.user_id}"
+            )
+            arguments["object"] = {
+                "kind": "user",
+                "id": record.user_id,
+                "role": "private_companion_target",
+            }
+        elif record.scope == "group" and record.platform and record.group_id:
+            arguments["session_id"] = (
+                record.session_id or f"{record.platform}:GroupMessage:{record.group_id}"
+            )
+            arguments["group_id"] = record.group_id
+            arguments["object"] = {
+                "kind": "group",
+                "id": record.group_id,
+                "role": "target_group",
+            }
+        else:
+            arguments["object"] = {
+                "kind": "bot",
+                "id": record.bot_id,
+                "role": "bot_self",
+            }
         if record.occurred_at:
             arguments["occurred_at"] = record.occurred_at
         if record.confidence is not None:
@@ -92,10 +174,10 @@ def _content(record: MemoryPushRecord) -> str:
     return text[:CONTENT_LIMIT]
 
 
-def memory_push_provider(context=None):
+def memory_push_provider(context=None, *, bridge=None):
     """组装用的窄端口：与 ``memory_owner_provider(context)`` 共用同一个 context。"""
 
-    return AstrBotMemoryPush(context)
+    return AstrBotMemoryPush(context, bridge=bridge)
 
 
 __all__ = [

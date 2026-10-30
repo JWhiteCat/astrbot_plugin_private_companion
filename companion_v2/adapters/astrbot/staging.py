@@ -255,6 +255,7 @@ class AstrBotStagingSession:
             raise ValueError("staging provider is unavailable or has an unverified native type")
         binding = ProviderBinding("model.text", profile.provider_id, native_types.version,
             provider_fingerprint(native))
+        self.bridge.memory_runtime = runtime
         self.model = AstrBotTextProvider(context, bridge=self.bridge, binding=binding,
             provider_id=profile.provider_id, version=native_types.version, provider_type=native_types.provider,
             function_tool_type=native_types.function_tool, tool_set_type=native_types.tool_set,
@@ -319,27 +320,47 @@ class AstrBotStagingSession:
         if relay_tool_port_factory is not None:
             relay_port = relay_tool_port_factory(self.bridge)
             tool_port = CompositeAstrBotToolPort(native_tool_port, relay_port)
-        self.host = AstrBotCompanionHost(runtime, event_port=self.bridge.ports, identity_port=self.bridge.ports,
-            role_port=self.bridge.ports, runtime_identity=profile.runtime_identity, registry=registry,
-            profiles=profiles, providers=tuple(model.local_provider() for model in self.models), budget=profile.budget,
+        self.host = AstrBotCompanionHost(
+            runtime,
+            event_port=self.bridge.ports,
+            identity_port=self.bridge.ports,
+            role_port=self.bridge.ports,
+            runtime_identity=profile.runtime_identity,
+            registry=registry,
+            profiles=profiles,
+            providers=tuple(model.local_provider() for model in self.models),
+            budget=profile.budget,
             budget_soft=profile.budget_soft,
             default_provider_resolver=default_provider_resolver,
-            sender=sender, policy=profile.policy, limits=profile.limits, now=now,
-            tool_port=tool_port, segmentation=profile.segmentation, voice_policy=voice_policy,
+            sender=sender,
+            policy=profile.policy,
+            limits=profile.limits,
+            now=now,
+            tool_port=tool_port,
+            segmentation=profile.segmentation,
+            voice_policy=voice_policy,
             # 记忆归属读的是别家插件自己公开的声明；适配层的这一个函数是唯一的跨插件
             # 读取点（核心不能反向导入宿主包，见 companion_v2/capabilities/ownership.py）。
             # 写入端口与它共用同一条发现路径和同一个 context：日记、梦境与主动消息
             # 完成后推给它，推送失败不影响已经完成的事（见 capabilities/memory_push.py）。
-            memory_owner=memory_owner_provider(context),
-            memory_push=memory_push_provider(context),
-            weather_port=weather_port, weather_alert_port=weather_alert_port, balance_port=balance_port,
+            memory_owner=memory_owner_provider(context, runtime=runtime),
+            memory_push=memory_push_provider(context, bridge=self.bridge),
+            weather_port=weather_port,
+            weather_alert_port=weather_alert_port,
+            balance_port=balance_port,
             solar_term_port=solar_term_port,
             news_port=news_port,
             search_port_factory=search_port_factory,
             qzone_transport=qzone_transport,
-            presence_port=OneBotPresencePort(self.bridge, reverse_api_type=native_types.reverse_api,
-                authorize=self.require_delivery_authorization, now=lambda: self.application.now())
-                if not self._uses_local_sender else None)
+            presence_port=OneBotPresencePort(
+                self.bridge,
+                reverse_api_type=native_types.reverse_api,
+                authorize=self.require_delivery_authorization,
+                now=lambda: self.application.now(),
+            )
+            if not self._uses_local_sender
+            else None,
+        )
         self.application = self.host.application
         if callable(getattr(native_tool_port, "bind_role_guard", None)):
             native_tool_port.bind_role_guard(self.bridge.verify_role, self.bridge.verified_persona)
@@ -531,6 +552,11 @@ class AstrBotStagingSession:
             self._configuration()
             result = self.host.receive(captured)
             if result.is_success:
+                from .memory_owner import record_native_memory_identity
+
+                await record_native_memory_identity(
+                    self.runtime, self.bridge, host_event, target
+                )
                 from companion_v2.memory.private_legacy_import import (
                     update_private_relationship,
                 )

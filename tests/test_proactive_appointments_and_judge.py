@@ -12,7 +12,7 @@ import unittest
 from companion_v2.agenda.models import Frequency, Schedule
 from companion_v2.configuration.models import ConfigurationError
 from companion_v2.configuration.registry import FieldRegistry
-from companion_v2.execution.models import encode
+from companion_v2.execution.models import TaskSpec, encode
 from companion_v2.model_gateway.routing import configuration_fields as model_fields
 from companion_v2.proactive import persona_judge
 from companion_v2.proactive.configuration import GROUP, configuration_fields
@@ -213,6 +213,15 @@ class PersonaJudgeTests(JudgeFixture, unittest.IsolatedAsyncioTestCase):
         status = app.proactive.observe(self.contact_context(), task_id).unwrap()
         self.assertEqual((status["delivery"], status["judge"], status["skipped"]), ("delivered", "resolved", False))
         self.assertEqual(self.sent[-1].text, "刚想起上次的话题。")
+        await self.until(lambda: not app.contact_schedule.active_handles)
+        judge_task = app.runtime.read_one("SELECT * FROM execution_tasks WHERE task_id = ?",
+            (record["judge"]["task_id"],))
+        self.assertEqual(judge_task["state"], "succeeded")
+        result = json.loads(judge_task["record_json"])
+        operation = app.proactive.operations.get(result["operation_id"]).unwrap()
+        self.assertEqual(operation.state.value, "completed")
+        self.assertEqual(result["receipt_ref"], operation.operation.operation_id)
+        self.assertNotEqual(result["operation_id"], self.contacts(app)[0]["operation_id"])
 
     async def test_dropped_judgement_withholds_the_draft_without_any_delivery(self):
         async def drop(envelope):
@@ -230,6 +239,38 @@ class PersonaJudgeTests(JudgeFixture, unittest.IsolatedAsyncioTestCase):
         status = app.proactive.observe(self.contact_context(), task_id).unwrap()
         self.assertEqual((status["skipped"], status["delivery"]), (True, None))
         self.assertEqual(self.deliveries(app), ())
+
+        await self.until(lambda: not app.contact_schedule.active_handles)
+        judge_task = app.runtime.read_one("SELECT * FROM execution_tasks WHERE task_id = ?",
+            (record["judge"]["task_id"],))
+        self.assertEqual(judge_task["state"], "succeeded")
+        result = json.loads(judge_task["record_json"])
+        operation = app.proactive.operations.get(result["operation_id"]).unwrap()
+        self.assertEqual(operation.state.value, "completed")
+        self.assertEqual(result["receipt_ref"], operation.operation.operation_id)
+
+    async def test_resolved_judgement_requires_its_matching_completed_operation(self):
+        host = await self.judged_host()
+        app = host.application
+        record = await self.judged(app)
+        await self.until(lambda: not app.contact_schedule.active_handles)
+        task = app.runtime.read_one("SELECT record_json FROM execution_tasks WHERE task_id = ?",
+            (record["judge"]["task_id"],))
+        result = json.loads(task["record_json"])
+        spec = TaskSpec.restore(result["spec"])
+        self.assertTrue(app.proactive.validate_judge(spec, self.clock.now()).is_success)
+
+        with app.runtime.transaction() as connection:
+            connection.execute("UPDATE operations SET state = 'accepted' WHERE operation_id = ?",
+                (result["operation_id"],))
+        self.assertEqual(app.proactive.validate_judge(spec, self.clock.now()).failure.code,
+                         "contact_judge_unavailable")
+
+        with app.runtime.transaction() as connection:
+            connection.execute("UPDATE operations SET state = 'completed', parameter_hash = 'mismatch' WHERE operation_id = ?",
+                (result["operation_id"],))
+        self.assertEqual(app.proactive.validate_judge(spec, self.clock.now()).failure.code,
+                         "contact_judge_unavailable")
 
     async def test_judgement_below_the_threshold_withholds_the_draft(self):
         async def low(envelope):

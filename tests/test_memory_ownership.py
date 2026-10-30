@@ -495,4 +495,4 @@ class MemoryOwnerDetectionTests(unittest.TestCase):
         install_memory_module(FakeModule(FakeBridge()))
         document = memory_owner_provider(None).state().document()
         self.assertEqual(set(document), {"owner", "reason", "module", "provider", "display_name"})
-        self.assertTrue(document["module"].endswith("astrbot_plugin_remember_you.main"))
+        self.assertTrue(document["module"].endswith("astrbot_plugin_memory_companion.main"))

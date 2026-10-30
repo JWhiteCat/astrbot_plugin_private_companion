@@ -21,6 +21,7 @@ from companion_v2.model_gateway.response_diagnostics import ResponseDiagnostics,
 from .model_wire import build_wire, decode_response
 from .native import check_version, native_id
 from .memory_output import capture, explicit_refusal, response_format
+from .memory_recall import with_external_memory
 from .streaming import StreamTranscript
 from .response_diagnostics import observe_completion
 from .provider_transport import definitely_not_sent
@@ -235,6 +236,18 @@ class AstrBotTextProvider:
 
     def reserve(self, envelope):
         estimate = self._estimate(envelope, build_wire(envelope, model_name=envelope.model_override or self.model))
+        from .memory_owner import memory_owner_provider
+
+        if (
+            memory_owner_provider(
+                self.context, runtime=getattr(self.bridge, "memory_runtime", None)
+            )
+            .state()
+            .delegated
+        ):
+            # Recall is bounded to 4,000 characters. Reserve its worst-case JSON
+            # encoding before the asynchronous provider call adds that material.
+            estimate += 4000 * 6 + 512
         # No assumed cache hit; reserve using the larger of the two input rates.
         rate = max(self.tariff.input, self.tariff.cached_input)
         return UsageTariff(rate, rate, self.tariff.output).amount(estimate, 0, envelope.max_output_tokens)
@@ -318,6 +331,7 @@ class AstrBotTextProvider:
         response = None
         diagnostics = ResponseDiagnostics()
         try:
+            envelope = await with_external_memory(self.context, self.bridge, envelope)
             wire = build_wire(envelope, model_name=envelope.model_override or self.model)
             logger.debug("[CompanionV2][开发者追踪] 模型提示词组装 provider=%s output_format=%s messages=%s tools=%s",
                          self.provider_id, wire.output_format, _developer_content(wire.messages),

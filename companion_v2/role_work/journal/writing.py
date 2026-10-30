@@ -445,10 +445,15 @@ class RoleJournalWriter:
             memory_id=push_memory_id(PUSH_PERSONA_LIFE, "journal", key, head.revision),
             content=content,
             kind=PUSH_PERSONA_LIFE,
-            scope="unknown",
-            # V2 的核心只有 ScopeRef，没有平台会话 id；角色日记本来也不属于某一个
-            # 聊天窗口，所以用 V2 自己的稳定命名空间，不伪造平台 umo。
-            session_id="private_companion_v2:journal:" + key.kind.value,
+            scope=material.context.scope.kind.value,
+            platform=material.context.scope.platform,
+            bot_id=material.context.scope.account_id or "",
+            persona_id=key.owner.persona_id,
+            original_context=job.context,
+            user_id=(material.context.scope.native_scope_id
+                     if material.context.scope.kind.value == "private" else ""),
+            group_id=(material.context.scope.native_scope_id
+                      if material.context.scope.kind.value == "group" else ""),
             occurred_at=head.updated_at.isoformat() if head.updated_at is not None else "",
             tags=("journal", key.kind.value, "persona_life"),
             metadata=metadata,

@@ -41,6 +41,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import logging
+
+from companion_v2.execution.models import TaskError
 
 from companion_v2.capabilities.ownership import (
     MemoryOwnership,
@@ -59,6 +63,8 @@ from companion_v2.capabilities.ownership import (
 # 前缀，独立运行时用裸包名）。这里不做 import：插件没加载时导入会执行它的模块级
 # 代码，那属于「探测带来副作用」。
 MEMORY_OWNER_MODULE_NAMES = (
+    "data.plugins.astrbot_plugin_memory_companion.main",
+    "astrbot_plugin_memory_companion.main",
     "data.plugins.astrbot_plugin_remember_you.main",
     "astrbot_plugin_remember_you.main",
 )
@@ -66,6 +72,8 @@ MEMORY_OWNER_MODULE_NAMES = (
 # 声明自己是谁。``display_name`` 用于页面文案；模块没写 display_name 时用插件 ID
 # 兜底，宁可显示机器名也不假装知道它叫什么。
 MEMORY_OWNER_PLUGIN_ID = "astrbot_plugin_memory_companion"
+EXTERNAL_MEMORY_OWNER_KEY = "external_memory_owner"
+EXTERNAL_MEMORY_IDENTITY_PREFIX = "external_memory_identity:"
 MEMORY_OWNER_DISPLAY_NAME = "我会牢牢记住你"
 MEMORY_OWNER_ACCESSORS = ("get_memory_companion_bridge", "get_active_bridge")
 
@@ -245,27 +253,197 @@ def read_memory_ownership(context) -> MemoryOwnership:
     return read_memory_owner(context).ownership
 
 
-def memory_owner_provider(context=None):
+def native_memory_identity(context, scope, *, persona_id, runtime=None):
+    """Resolve the external memory identity from recorded native evidence.
+
+    Args:
+        context: Native AstrBot context used to verify the platform kind.
+        scope: Authenticated V2 conversation scope.
+        persona_id: Persona selected and verified by the native host.
+        runtime: Optional installation store containing migrated owner evidence.
+
+    Returns:
+        Exact session, bot, persona and target fields for Memory Companion.
+
+    Raises:
+        TaskError: The original native identity is missing or no longer matches.
+    """
+    kind = scope.kind.value
+    if kind not in {"private", "group"} or not persona_id:
+        raise TaskError(
+            "external_memory_identity_unavailable",
+            "memory requires a native conversation and persona",
+        )
+    native_session = getattr(scope, "session_id", None) or scope.native_scope_id
+    session_id = f"{scope.platform}:{'FriendMessage' if kind == 'private' else 'GroupMessage'}:{native_session}"
+    bot_id = ""
+    if runtime is not None:
+        row = runtime.read_one(
+            "SELECT value FROM runtime_metadata WHERE key = ?",
+            (EXTERNAL_MEMORY_IDENTITY_PREFIX + session_id,),
+        )
+        if row is not None:
+            try:
+                evidence = json.loads(row[0])
+            except (TypeError, ValueError) as error:
+                raise TaskError(
+                    "external_memory_identity_invalid",
+                    "recorded memory identity is invalid",
+                ) from error
+            expected = {
+                "persona_id": persona_id,
+                "platform": scope.platform,
+                "account_id": scope.account_id,
+                "user_id": scope.native_scope_id if kind == "private" else "",
+                "group_id": scope.native_scope_id if kind == "group" else "",
+            }
+            if not isinstance(evidence, dict) or any(
+                evidence.get(key) != value for key, value in expected.items()
+            ):
+                raise TaskError(
+                    "external_memory_identity_changed",
+                    "native memory route differs from its recorded owner",
+                )
+            bot_id = str(evidence.get("bot_id") or "")
+            if not bot_id:
+                raise TaskError(
+                    "external_memory_identity_invalid",
+                    "recorded memory owner is missing",
+                )
+    if not bot_id:
+        platform = context.get_platform_inst(scope.platform)
+        if platform is not None and platform.meta().name == "aiocqhttp":
+            bot_id = scope.account_id or ""
+    if not bot_id:
+        raise TaskError(
+            "external_memory_identity_unavailable",
+            "native memory bot identity has not been verified",
+        )
+    return {
+        "session_id": session_id,
+        "scope": kind,
+        "platform": scope.platform,
+        "bot_id": bot_id,
+        "persona_id": persona_id,
+        "user_id": scope.native_scope_id if kind == "private" else "",
+        "group_id": scope.native_scope_id if kind == "group" else "",
+    }
+
+
+def memory_owner_provider(context=None, *, runtime=None):
     """组装用的窄端口：注入一个函数，核心只认 ``state()``。"""
 
-    return _ContextMemoryOwner(context)
+    return _ContextMemoryOwner(context, runtime)
+
+
+async def record_native_memory_identity(runtime, bridge, event, context):
+    """Persist native ownership evidence after authenticated input admission.
+
+    Args:
+        runtime: Installation store holding the selected external owner.
+        bridge: Native bridge that verifies the current persona.
+        event: Original SDK event, never a reconstructed background event.
+        context: Admitted conversation identity and audience.
+
+    Returns:
+        Whether exact native evidence was recorded. Missing evidence leaves
+        background memory unavailable without invalidating admitted input.
+    """
+    if not memory_owner_provider(bridge.context, runtime=runtime).state().delegated:
+        return False
+    try:
+        scope = context.scope
+        channel = "FriendMessage" if scope.kind.value == "private" else "GroupMessage"
+        native_session = getattr(scope, "session_id", None) or scope.native_scope_id
+        umo = f"{scope.platform}:{channel}:{native_session}"
+        if str(event.unified_msg_origin) != umo:
+            raise TaskError(
+                "external_memory_identity_changed",
+                "native event route differs from its admitted scope",
+            )
+        bot_id = str(event.get_self_id() or "").strip()
+        if not bot_id:
+            raise TaskError(
+                "external_memory_identity_unavailable",
+                "native event has no memory owner identity",
+            )
+        persona = await bridge.verified_persona(scope, context.role_binding)
+        persona_id = str(persona.get("persona_id") or "").strip()
+        if not persona_id:
+            raise TaskError(
+                "external_memory_identity_unavailable",
+                "native event has no verified persona",
+            )
+        evidence = {
+            "bot_id": bot_id,
+            "persona_id": persona_id,
+            "platform": scope.platform,
+            "account_id": scope.account_id,
+            "user_id": scope.native_scope_id if scope.kind.value == "private" else "",
+            "group_id": scope.native_scope_id if scope.kind.value == "group" else "",
+        }
+        with runtime.transaction() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO runtime_metadata (key, value) VALUES (?, ?)",
+                (
+                    EXTERNAL_MEMORY_IDENTITY_PREFIX + umo,
+                    json.dumps(evidence, ensure_ascii=False),
+                ),
+            )
+        return True
+    except Exception as error:
+        logging.getLogger(__name__).warning(
+            "Native memory identity could not be recorded error_type=%s",
+            type(error).__name__,
+        )
+        return False
 
 
 class _ContextMemoryOwner:
-    def __init__(self, context):
+    def __init__(self, context, runtime=None):
         self._context = context
+        self._runtime = runtime
 
     def state(self) -> MemoryOwnership:
-        return read_memory_ownership(self._context)
+        state = read_memory_ownership(self._context)
+        if self._runtime is not None:
+            try:
+                selected = self._runtime.read_one(
+                    "SELECT value FROM runtime_metadata WHERE key = ?",
+                    (EXTERNAL_MEMORY_OWNER_KEY,),
+                )
+            except Exception:
+                # An unreadable installation cannot authorize a second live store.
+                return MemoryOwnership(
+                    owner=RENDER_EXTERNAL,
+                    reason=REASON_HANDLE_UNREADABLE,
+                    provider=MEMORY_OWNER_PLUGIN_ID,
+                    display_name=MEMORY_OWNER_DISPLAY_NAME,
+                )
+            if selected is not None and selected[0]:
+                # A migrated installation must not start a second live memory
+                # store when its selected external owner is temporarily down.
+                return MemoryOwnership(
+                    owner=RENDER_EXTERNAL,
+                    reason=state.reason,
+                    module=state.module,
+                    provider=str(selected[0]),
+                    display_name=state.display_name or MEMORY_OWNER_DISPLAY_NAME,
+                )
+        return state
 
 
 __all__ = [
+    "EXTERNAL_MEMORY_IDENTITY_PREFIX",
+    "EXTERNAL_MEMORY_OWNER_KEY",
     "MEMORY_OWNER_ACCESSORS",
     "MEMORY_OWNER_DISPLAY_NAME",
     "MEMORY_OWNER_MODULE_NAMES",
     "MEMORY_OWNER_PLUGIN_ID",
     "MemoryOwnerHandle",
     "memory_owner_provider",
+    "native_memory_identity",
+    "record_native_memory_identity",
     "read_memory_owner",
     "read_memory_ownership",
 ]

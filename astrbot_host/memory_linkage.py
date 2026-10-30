@@ -3,7 +3,10 @@
 from collections.abc import Mapping
 from typing import Any
 
-from companion_v2.adapters.astrbot.memory_owner import read_memory_owner
+from companion_v2.adapters.astrbot.memory_owner import (
+    native_memory_identity,
+    read_memory_owner,
+)
 from companion_v2.foundation.refs import ScopeKind
 
 
@@ -61,18 +64,37 @@ async def read_external_memory_summary(controller, context) -> dict[str, Any]:
     if producer is None:
         return _unavailable("unavailable", provider, display_name, "v2_registration_unavailable")
     try:
-        register = getattr(owner.handle, "register_private_companion_memory_summary_reader", None)
-        create_context = getattr(owner.handle, "create_private_companion_memory_summary_context", None)
+        register = getattr(owner.handle, "register_private_companion", None)
+        create_context = getattr(owner.handle, "create_user_memory_context", None)
         read_summary = getattr(owner.handle, "read_user_memory_summary", None)
         if not all(callable(method) for method in (register, create_context, read_summary)):
             return _unavailable("unavailable", provider, display_name, "summary_contract_unavailable")
         capability = register(producer)
         if capability is None:
             return _unavailable("unavailable", provider, display_name, "v2_capability_denied")
-        session_id = f"{scope.platform}:FriendMessage:{scope.native_scope_id}"
-        requester = create_context(capability, bot_id=scope.bot_id or "", scope="private",
-                                   platform=scope.platform, user_id=scope.native_scope_id,
-                                   session_id=session_id)
+        # Target views expose only the selected application/profile projection.
+        host = getattr(controller, "controller", controller)
+        session = getattr(host, "session", None)
+        bridge = getattr(session, "bridge", None)
+        if bridge is None:
+            return _unavailable(
+                "unavailable", provider, display_name, "native_identity_unavailable"
+            )
+        persona = await bridge.verified_persona(scope, context.role_binding)
+        identity = native_memory_identity(
+            controller.context,
+            scope,
+            persona_id=str(persona.get("persona_id") or ""),
+            runtime=getattr(session, "runtime", None),
+        )
+        session_id = identity["session_id"]
+        requester = create_context(
+            capability,
+            **{
+                key: identity[key]
+                for key in ("bot_id", "scope", "platform", "user_id", "session_id")
+            },
+        )
         if requester is None:
             return _unavailable("unavailable", provider, display_name, "private_context_unavailable")
         raw = await read_summary(scope.native_scope_id, session_id=session_id, limit=8,

@@ -29,7 +29,7 @@ from dataclasses import dataclass
 import logging
 from typing import Protocol
 
-from companion_v2.execution.models import digest
+from companion_v2.execution.models import TaskContext, digest
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,11 @@ class MemoryPushRecord:
     metadata: tuple[tuple[str, object], ...] = ()
     confidence: float | None = None
     importance: float | None = None
+    bot_id: str = ""
+    persona_id: str = ""
+    user_id: str = ""
+    group_id: str = ""
+    original_context: TaskContext | None = None
 
     def __post_init__(self):
         if self.kind not in PUSH_KINDS:
@@ -79,6 +84,11 @@ class MemoryPushRecord:
             raise ValueError("memory push requires recallable content")
         if not isinstance(self.scope, str) or not isinstance(self.session_id, str) or not isinstance(self.platform, str):
             raise ValueError("memory push routing fields must be strings")
+        if any(
+            not isinstance(value, str)
+            for value in (self.bot_id, self.persona_id, self.user_id, self.group_id)
+        ):
+            raise ValueError("memory push identities must be strings")
         if not isinstance(self.occurred_at, str):
             raise ValueError("memory push time must be an ISO string")
         if not isinstance(self.tags, tuple) or any(not isinstance(tag, str) or not tag for tag in self.tags):
@@ -94,11 +104,23 @@ class MemoryPushRecord:
     def document(self) -> dict:
         """给日志和测试用的纯 JSON 文档；不参与接收方的写入形状。"""
 
-        return {"memory_id": self.memory_id, "kind": self.kind, "content": self.content,
-                "scope": self.scope, "session_id": self.session_id, "platform": self.platform,
-                "occurred_at": self.occurred_at, "tags": list(self.tags),
-                "metadata": dict(self.metadata), "confidence": self.confidence,
-                "importance": self.importance}
+        return {
+            "memory_id": self.memory_id,
+            "kind": self.kind,
+            "content": self.content,
+            "scope": self.scope,
+            "session_id": self.session_id,
+            "platform": self.platform,
+            "occurred_at": self.occurred_at,
+            "tags": list(self.tags),
+            "metadata": dict(self.metadata),
+            "confidence": self.confidence,
+            "importance": self.importance,
+            "bot_id": self.bot_id,
+            "persona_id": self.persona_id,
+            "user_id": self.user_id,
+            "group_id": self.group_id,
+        }
 
 
 def push_memory_id(kind: str, *identity) -> str:

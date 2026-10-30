@@ -19,7 +19,10 @@ V2 的记忆表达让位给牢插件（见 ``tests/test_memory_ownership.py``）
 
 from __future__ import annotations
 
+from tests import astrbot_data_root as _isolated_astrbot_root  # noqa: F401
+
 import json
+import asyncio
 import sys
 import unittest
 
@@ -60,6 +63,9 @@ class RecordingBridge:
 
     async def record_proactive_message(self, *, content, **kwargs):
         return await self._record("record_proactive_message", content, kwargs)
+
+    async def record_visible_turn(self, *, content, **kwargs):
+        return await self._record("record_visible_turn", content, kwargs)
 
     async def _record(self, method, content, kwargs):
         self.calls.append({"method": method, "content": content, "kwargs": kwargs})
@@ -153,7 +159,8 @@ class MemoryPushPortTests(MemoryPluginDeclaration, unittest.IsolatedAsyncioTestC
                   "content": "Bot 在 2026-09-21 写下了自己的日记（随记）：今天读到第三章。",
                   "kind": PUSH_PERSONA_LIFE, "scope": "unknown",
                   "session_id": "private_companion_v2:journal:diary", "occurred_at": "2026-09-21T12:00:00+00:00",
-                  "tags": ("journal", "diary", "persona_life"), "metadata": (("local_date", "2026-09-21"),)}
+                  "tags": ("journal", "diary", "persona_life"), "metadata": (("local_date", "2026-09-21"),),
+                  "bot_id": "100", "persona_id": "original"}
         fields.update(changes)
         return MemoryPushRecord(**fields)
 
@@ -293,8 +300,10 @@ class JournalMemoryPushTests(MemoryPluginDeclaration, HostFixture, unittest.Isol
         entry = self.stored()
         self.assertEqual(call["kwargs"]["memory_id"], self.expected_diary_identity(entry.reference.key, entry.reference.revision))
         self.assertEqual(call["kwargs"]["source_plugin"], PUSH_SOURCE_PLUGIN)
-        self.assertEqual(call["kwargs"]["scope"], "unknown")
-        self.assertEqual(call["kwargs"]["session_id"], "private_companion_v2:journal:diary")
+        self.assertEqual(call["kwargs"]["scope"], "private")
+        self.assertEqual(call["kwargs"]["session_id"], f"{SCOPE.platform}:FriendMessage:{SCOPE.native_scope_id}")
+        self.assertEqual(call["kwargs"]["metadata"]["owner_bot_id"], SCOPE.account_id)
+        self.assertEqual(call["kwargs"]["object"]["id"], SCOPE.native_scope_id)
         self.assertEqual(call["kwargs"]["tags"], ["journal", "diary", "persona_life"])
         self.assertEqual(call["kwargs"]["metadata"]["journal_kind"], "diary")
         self.assertEqual(call["kwargs"]["metadata"]["local_date"], "2026-09-21")
@@ -320,7 +329,7 @@ class JournalMemoryPushTests(MemoryPluginDeclaration, HostFixture, unittest.Isol
         self.assertIn("窄楼梯", dream["content"])
         self.assertIn("醒来还觉得轻松。", dream["content"])
         self.assertEqual(dream["kwargs"]["metadata"]["journal_kind"], "dream")
-        self.assertEqual(dream["kwargs"]["session_id"], "private_companion_v2:journal:dream")
+        self.assertEqual(dream["kwargs"]["session_id"], f"{SCOPE.platform}:FriendMessage:{SCOPE.native_scope_id}")
         self.assertEqual(dream["kwargs"]["tags"], ["journal", "dream", "persona_life"])
         self.assertNotEqual(bridge.calls[0]["kwargs"]["memory_id"], dream["kwargs"]["memory_id"])
 
@@ -428,10 +437,12 @@ class ProactiveMemoryPushTests(MemoryPluginDeclaration, ContactFixture, unittest
         task = (await self.contact(app)).unwrap().task
 
         self.assertEqual((task.state, task.effect), ("succeeded", "committed"))
+        delivered = await self.delivery_state(app, task.task_id, "delivered")
+        await self.until(lambda: not app.proactive._memory_pushes)
         call = bridge.only("record_proactive_message")
         self.assertIn(self.visible(), call["content"])
         self.assertEqual(call["kwargs"]["memory_id"],
-                         push_memory_id(PUSH_PROACTIVE_MESSAGE, "proactive", self.contact_id(app)))
+                         push_memory_id(PUSH_PROACTIVE_MESSAGE, "proactive", self.contact_id(app), delivered["delivery_id"]))
         self.assertEqual(call["kwargs"]["source_plugin"], PUSH_SOURCE_PLUGIN)
         self.assertEqual(call["kwargs"]["scope"], "private")
         self.assertEqual(call["kwargs"]["platform"], SCOPE.platform)
@@ -439,6 +450,12 @@ class ProactiveMemoryPushTests(MemoryPluginDeclaration, ContactFixture, unittest
         self.assertEqual(call["kwargs"]["metadata"]["clean_visible_text"], self.visible())
         self.assertEqual(call["kwargs"]["metadata"]["event_type"], "proactive_message")
         self.assertEqual(call["kwargs"]["metadata"]["contact_id"], self.contact_id(app))
+        visible = bridge.only("record_visible_turn")
+        self.assertEqual(visible["content"], self.visible())
+        self.assertEqual(visible["kwargs"]["session_id"], f"{SCOPE.platform}:FriendMessage:{SCOPE.native_scope_id}")
+        self.assertEqual(visible["kwargs"]["metadata"]["bot_id"], SCOPE.account_id)
+        app.proactive.delivery_confirmed(delivered["delivery_id"])
+        self.assertEqual(len(bridge.calls), 2)
 
     async def test_a_skipped_opportunity_is_never_written_to_memory(self):
         """模型决定这次不发：什么都没发生，记忆里也不能多出一句话。"""
@@ -461,10 +478,74 @@ class ProactiveMemoryPushTests(MemoryPluginDeclaration, ContactFixture, unittest
 
         task = (await self.contact(app)).unwrap().task
 
-        self.assertEqual([call["method"] for call in bridge.calls], ["record_proactive_message"])
         self.assertEqual((task.state, task.effect), ("succeeded", "committed"))
         await self.delivery_state(app, task.task_id, "delivered")
+        await self.until(lambda: not app.proactive._memory_pushes)
+        self.assertEqual([call["method"] for call in bridge.calls], ["record_proactive_message"])
         self.assertEqual(self.sent[0].text, self.visible())
+
+    async def test_interrupted_external_write_is_not_replayed_after_delivery_reconciliation(self):
+        app, bridge = await self.enabled_with_memory_plugin()
+        written = asyncio.Event()
+        pending = asyncio.Event()
+        original = bridge.record_proactive_message
+
+        async def interrupted(**kwargs):
+            await original(**kwargs)
+            written.set()
+            await pending.wait()
+
+        bridge.record_proactive_message = interrupted
+        task = (await self.contact(app)).unwrap().task
+        delivered = await self.delivery_state(app, task.task_id, "delivered")
+        await asyncio.wait_for(written.wait(), 5)
+        worker = app.proactive._memory_pushes[delivered["delivery_id"]]
+        worker.cancel()
+        await asyncio.gather(worker, return_exceptions=True)
+        await self.until(lambda: not app.proactive._memory_pushes)
+        state = json.loads(app.runtime.read_one("SELECT value FROM runtime_metadata WHERE key=?",
+            ("external_memory_delivery:" + delivered["delivery_id"],))[0])
+        self.assertEqual(state["state"], "unknown")
+        app.proactive.delivery_confirmed(delivered["delivery_id"])
+        self.assertFalse(app.proactive._memory_pushes)
+        self.assertEqual(len(bridge.calls), 1)
+
+    async def test_empty_visible_receipt_leaves_delivery_unknown_without_replay(self):
+        app, bridge = await self.enabled_with_memory_plugin()
+        original = bridge.record_visible_turn
+
+        async def unconfirmed(**kwargs):
+            await original(**kwargs)
+            return ""
+
+        bridge.record_visible_turn = unconfirmed
+        task = (await self.contact(app)).unwrap().task
+        delivered = await self.delivery_state(app, task.task_id, "delivered")
+        await self.until(lambda: not app.proactive._memory_pushes)
+        state = json.loads(app.runtime.read_one("SELECT value FROM runtime_metadata WHERE key=?",
+            ("external_memory_delivery:" + delivered["delivery_id"],))[0])
+        self.assertEqual(state["state"], "unknown")
+        self.assertEqual(self.sent[0].text, self.visible())
+        bridge.only("record_proactive_message")
+        bridge.only("record_visible_turn")
+        app.proactive.delivery_confirmed(delivered["delivery_id"])
+        self.assertFalse(app.proactive._memory_pushes)
+        self.assertEqual(len(bridge.calls), 2)
+
+    async def test_missing_visible_api_leaves_delivery_unknown_without_replay(self):
+        app, bridge = await self.enabled_with_memory_plugin()
+        bridge.record_visible_turn = None
+        task = (await self.contact(app)).unwrap().task
+        delivered = await self.delivery_state(app, task.task_id, "delivered")
+        await self.until(lambda: not app.proactive._memory_pushes)
+        state = json.loads(app.runtime.read_one("SELECT value FROM runtime_metadata WHERE key=?",
+            ("external_memory_delivery:" + delivered["delivery_id"],))[0])
+        self.assertEqual(state["state"], "unknown")
+        self.assertEqual(self.sent[0].text, self.visible())
+        bridge.only("record_proactive_message")
+        app.proactive.delivery_confirmed(delivered["delivery_id"])
+        self.assertFalse(app.proactive._memory_pushes)
+        self.assertEqual(len(bridge.calls), 1)
 
 
 if __name__ == "__main__":
