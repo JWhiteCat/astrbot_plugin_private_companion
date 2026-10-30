@@ -155,7 +155,9 @@ class CoreReplyGroupOwnerToolTests(NativeOwnerCalls, GroupFixture, unittest.Isol
         # Keep this turn authorized so withdrawal tests semantic invalidation
         # rather than the independent recall-silence guard.
         owner = ReplyConfigurationOwner(self.app.runtime)
-        target, fields = target_for(prepared["context"]), configuration_fields()
+        common = self.controller.settings.common
+        target = target_for(prepared["context"])
+        fields = configuration_fields(common.segmentation, common.streaming, common.policy.part_gap_seconds)
         owner.write(target, fields, changes={GROUP + ".recall_silence_enabled": False},
                     reset=(), expected_revision=owner.read(target, fields).revision,
                     observed_at=self.clock.now())
