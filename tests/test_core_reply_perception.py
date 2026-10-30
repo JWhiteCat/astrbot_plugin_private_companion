@@ -11,6 +11,7 @@ from astrbot_host.core_reply_perception import (
     inject_core_reply_perception_context,
     inject_core_reply_perception_policy,
 )
+from astrbot_host.group_admission import group_trigger_facts
 from companion_v2.conversation.voice_reply import VoiceReplyPolicy
 
 
@@ -43,6 +44,86 @@ def perception_payload(request):
 
 
 class CoreReplyPerceptionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_authenticated_bot_mention_reaches_provider_with_other_recipients(
+        self,
+    ):
+        for targets in (("bot",), ("bot", "other"), ("other", "bot")):
+            with self.subTest(targets=targets):
+                event = Event()
+                event.platform_meta = NS(name="qq_official")
+                event.message_obj = NS(
+                    self_id="bot",
+                    raw_message={
+                        "mentions": [
+                            {"id": target, "is_you": target == "bot"}
+                            for target in targets
+                        ]
+                    },
+                    message=[],
+                )
+                facts = group_trigger_facts(event, "bot")
+                turn = prepared()
+                turn["group_admission"] = {
+                    "mentioned": facts["mentioned"],
+                    "reason": "mention",
+                }
+                event.extra[CORE_REPLY_CONTEXT_EXTRA] = {"prepared": turn}
+                # The self mention may be absent from the model's plain text.
+                text = (
+                    "<@other> " if "other" in targets else ""
+                ) + "用playwright总结这个网页"
+                request = NS(
+                    prompt=text,
+                    system_prompt="AstrBot 人格",
+                    extra_user_content_parts=[],
+                )
+                await inject_core_reply_perception_context(event, request)
+                await inject_core_reply_perception_context(event, request)
+                hint = perception_payload(request)["group_participation_hint"]
+                self.assertIn("平台消息组件已确认本轮明确 @ 了机器人", hint)
+                self.assertIn("同时 @ 其他群成员不会取消对你的请求", hint)
+                self.assertIn("不能仅因也 @ 了别人", hint)
+                self.assertNotIn("本轮没有明确 @", hint)
+                self.assertEqual(len(request.extra_user_content_parts), 1)
+                provider = object.__new__(ProviderOpenAIOfficial)
+                assembled = await provider.assemble_context(
+                    request.prompt,
+                    extra_user_content_parts=request.extra_user_content_parts,
+                )
+                self.assertIn(hint, assembled["content"][-1]["text"])
+
+    async def test_bot_mention_keeps_explicit_wait_or_no_reply_intent(self):
+        for text in ("@机器人 先等一下，我还没发完", "@机器人 这条不用回复"):
+            with self.subTest(text=text):
+                event = Event()
+                turn = prepared()
+                turn["group_admission"] = {"mentioned": True, "reason": "mention"}
+                event.extra[CORE_REPLY_CONTEXT_EXTRA] = {"prepared": turn}
+                request = NS(prompt=text, extra_user_content_parts=[])
+                await inject_core_reply_perception_context(event, request)
+                hint = perception_payload(request)["group_participation_hint"]
+                self.assertIn("等待补充", hint)
+                self.assertIn("不用回复", hint)
+                self.assertEqual(request.prompt, text)
+
+    async def test_other_recipient_or_private_turn_does_not_claim_bot_mention(self):
+        for admission in (None, {"mentioned": False, "reason": "question"}):
+            with self.subTest(admission=admission):
+                event = Event()
+                turn = prepared()
+                if admission is not None:
+                    turn["group_admission"] = admission
+                event.extra[CORE_REPLY_CONTEXT_EXTRA] = {"prepared": turn}
+                request = NS(
+                    prompt="<@other> 用playwright总结这个网页",
+                    extra_user_content_parts=[],
+                )
+                await inject_core_reply_perception_context(event, request)
+                hint = perception_payload(request).get("group_participation_hint", "")
+                self.assertNotIn("已确认本轮明确 @ 了机器人", hint)
+                if admission is not None:
+                    self.assertIn("本轮没有明确 @", hint)
+
     async def test_configured_wake_name_restores_primary_provider_prompt(self):
         event = Event()
         event.is_at_or_wake_command = True

@@ -173,16 +173,37 @@ def _setting_instructions(prepared):
 
 
 def _group_participation_hint(prepared):
+    """Describe participation using the authenticated admission result.
+
+    Args:
+        prepared: Prepared core turn with its validated group admission.
+
+    Returns:
+        Addressing guidance, or an empty string for a non-group turn.
+    """
     admission = prepared.get("group_admission")
-    if not isinstance(admission, Mapping) or admission.get("mentioned"):
+    if not isinstance(admission, Mapping):
         return ""
+    if admission.get("mentioned"):
+        # Use authenticated admission even when the adapter omits the self
+        # mention from plain text or leaves other recipients visible there.
+        return (
+            "平台消息组件已确认本轮明确 @ 了机器人，你也是本条消息的接收对象。"
+            "此事实优先于仅从正文、昵称或历史推断的提及归因；正文没有保留对你的 @ 不表示没有叫你。"
+            "同时 @ 其他群成员不会取消对你的请求，不能仅因也 @ 了别人就认定只在找别人、"
+            "以不抢答或避免重复执行为由选择 skip。结合本条原话处理交给你的任务；"
+            "如果用户明确要求等待补充、不用回复，或明确只让另一位执行，则尊重该意图。"
+        )
     from companion_v2.conversation.group_admission import REASONS
 
     reason = admission.get("reason")
-    hint = ("本轮没有明确 @，入站候选依据是：" + REASONS.get(reason, "原人格自主判断参与")
-            + "。候选只表示可以考虑参与，默认旁听；弱相关词不代表在叫你，近期同一成员发言也不代表仍在对你说话。"
-            "没有清楚的参与邀请、他人在交流、已有回答或近期已说够时，调用 group.participation.choose 选择 skip，"
-            "决定接话时先记录 mode=reply 和简短 reason。")
+    hint = (
+        "本轮没有明确 @，入站候选依据是："
+        + REASONS.get(reason, "原人格自主判断参与")
+        + "。候选只表示可以考虑参与，默认旁听；弱相关词不代表在叫你，近期同一成员发言也不代表仍在对你说话。"
+        "没有清楚的参与邀请、他人在交流、已有回答或近期已说够时，调用 group.participation.choose 选择 skip，"
+        "决定接话时先记录 mode=reply 和简短 reason。"
+    )
     if reason in ("active_follow_up", "reply_follow_up"):
         hint += ("这是机器人上一轮互动后的非点名接话候选，发言者可能是另一位群成员；请结合上一轮群聊上下文，"
                  "判断对方是在回答你的追问、补充刚才未说完的信息或顺着刚才与你的话头继续聊（此时自然接住并选择 mode=reply），"
