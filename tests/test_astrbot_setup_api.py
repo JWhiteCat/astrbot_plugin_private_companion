@@ -18,6 +18,7 @@ from astrbot_host.controller import AstrBotStagingController
 from astrbot_host.multi_controller import AstrBotMultiController
 from astrbot_host.setup_api import (PROACTIVE_TEST_FAILURE_LABELS, PROACTIVE_TEST_STAGE_BY_CODE,
                                     PROACTIVE_TEST_SUGGESTIONS, SetupWebAPI)
+from astrbot_host.setup_state import SETUP_STEPS
 from companion_v2.adapters.astrbot.staging import NativeAdapterTypes
 from companion_v2.execution.models import TaskError
 from companion_v2.proactive.diagnostic_models import DiagnosticSourceError
@@ -119,6 +120,37 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         await wait_for_batch(self.controller.session, batch)
         self.assertEqual(len(self.message_calls()), 1)
 
+    async def test_synthetic_care_diagnostic_generates_with_a_self_page_role_reference(self):
+        await self.enter_model_step()
+        self.assertEqual((await self.call("model", {"provider_id": "native-model"}))["status"], "ok")
+        await self.prepare_trusted_conversation_source()
+
+        from astrbot_host.management_identity import dashboard_operator
+        from companion_v2.proactive.management import ContactManagement
+
+        session = self.controller.session
+        manager = ContactManagement(session.application, session.profile.target)
+        operator = dashboard_operator(self.controller.runtime, "administrator", at=NOW)
+        current = manager.status(operator).unwrap()
+        manager.configure(operator, {"operation_key": "enable-synthetic-care-diagnostic",
+            "edit_token": current["edit_token"], "changes": {"enabled": True}}).unwrap()
+        self.prepare_contact_model("I'm here.")
+        reference = "Stable self-page profile for emotional care."
+        context = session.profile.target
+        candidate = await session.application.contact_schedule.synthetic_diagnostic_candidate(
+            context, "care", at=NOW, test_id="synthetic-care-role-reference")
+
+        with patch.object(session.application.gateway.role_reference, "instruction", return_value=reference):
+            response = await session.application.proactive.contact(
+                context, candidate["opportunity"], candidate["intents"],
+                role_instruction=candidate["role_instruction"], selection_seed="synthetic-care-role-reference",
+                administrator_test=True, diagnostic_origin=candidate["diagnostic_origin"])
+
+        self.assertTrue(response.is_success, response.failure)
+        self.assertEqual(response.unwrap().task.state, "succeeded")
+        payload = self.native.provider.client.state.calls[-1][0]
+        self.assertTrue(payload["messages"][0]["content"].startswith(reference))
+
     async def test_proactive_diagnostic_uses_source_backed_route_and_core_context(self):
         context = NS(scope=NS(kind=ScopeKind.PRIVATE),
                      role_binding=NS(role=NS(subject_id="core-role")))
@@ -191,6 +223,13 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("硬额度", budget_failure["failure_title"])
         self.assertTrue(any(item == {"stage": "model_generation", "state": "failed"}
                             for item in budget_failure["stages"]))
+        app.proactive.contact.return_value = Outcome.failed("model_not_started", "request preparation failed")
+        with patch("astrbot_host.setup_api.request", request), \
+             patch("astrbot_host.setup_api.ContactManagement", ContactManager), \
+             patch("astrbot_host.setup_api.dashboard_operator", return_value=object()):
+            preparation_failure = (await api.proactive_diagnostic())["data"]
+        self.assertEqual(preparation_failure["stage"], "model_generation")
+        self.assertEqual(preparation_failure["failure_title"], "主动联系模型请求未能启动")
         app.proactive.contact.return_value = Outcome.success(NS(task=task))
 
         app.proactive.observe = lambda _context, _task_id: Outcome.success({"skipped": True,
@@ -737,14 +776,15 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         await self.enter_model_step()
         self.assertEqual((await self.call("model", {"provider_id": "native-model"}))["status"], "ok")
         self.assertEqual((await self.call("complete", {"step": "model", "skipped": False}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "knowledge", "skipped": True}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "relationships", "skipped": True}))["status"], "ok")
+        for step in SETUP_STEPS[1:]:
+            self.assertEqual((await self.call("complete", {"step": step, "skipped": True}))["status"], "ok")
         await self.prepare_trusted_conversation_source()
 
         generated_text = "想起你说过的航行计划。"
         self.prepare_contact_model(generated_text)
         self.native.platform.client._api._wsr_api.result = {"message_id": -456}
         first = await self.call("proactive_test", {"enable_proactive": True})
+        self.assertEqual(first["status"], "ok", first)
         again = await self.call("proactive_test", {"enable_proactive": True})
         receipt = await self.wait_for_test()
 
@@ -768,8 +808,8 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         await self.enter_model_step()
         await self.call("model", {"provider_id": "native-model"})
         await self.call("complete", {"step": "model", "skipped": False})
-        await self.call("complete", {"step": "knowledge", "skipped": True})
-        await self.call("complete", {"step": "relationships", "skipped": True})
+        for step in SETUP_STEPS[1:]:
+            self.assertEqual((await self.call("complete", {"step": step, "skipped": True}))["status"], "ok")
         await self.prepare_trusted_conversation_source()
         self.prepare_contact_model()
         reverse_api = self.native.platform.client._api._wsr_api
@@ -816,8 +856,8 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         await self.enter_model_step()
         self.assertEqual((await self.call("model", {"provider_id": "native-model"}))["status"], "ok")
         self.assertEqual((await self.call("complete", {"step": "model", "skipped": False}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "knowledge", "skipped": True}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "relationships", "skipped": True}))["status"], "ok")
+        for step in SETUP_STEPS[1:]:
+            self.assertEqual((await self.call("complete", {"step": step, "skipped": True}))["status"], "ok")
         await self.prepare_trusted_conversation_source()
         self.prepare_contact_model()
         self.assertEqual((await self.call("proactive_test", {"enable_proactive": True}))["data"]["state"], "started")
@@ -837,8 +877,8 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         await self.enter_model_step()
         self.assertEqual((await self.call("model", {"provider_id": "native-model"}))["status"], "ok")
         self.assertEqual((await self.call("complete", {"step": "model", "skipped": False}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "knowledge", "skipped": True}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "relationships", "skipped": True}))["status"], "ok")
+        for step in SETUP_STEPS[1:]:
+            self.assertEqual((await self.call("complete", {"step": step, "skipped": True}))["status"], "ok")
 
         started = await self.controller.start()
         self.assertIsNone(started.failure, started.failure)
@@ -891,8 +931,8 @@ class AstrBotSetupFlowTests(unittest.IsolatedAsyncioTestCase):
         await self.enter_model_step()
         self.assertEqual((await self.call("model", {"provider_id": "native-model"}))["status"], "ok")
         self.assertEqual((await self.call("complete", {"step": "model", "skipped": False}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "knowledge", "skipped": True}))["status"], "ok")
-        self.assertEqual((await self.call("complete", {"step": "relationships", "skipped": True}))["status"], "ok")
+        for step in SETUP_STEPS[1:]:
+            self.assertEqual((await self.call("complete", {"step": step, "skipped": True}))["status"], "ok")
         await self.prepare_trusted_conversation_source()
         self.prepare_contact_model()
         self.assertEqual((await self.call("proactive_test", {"enable_proactive": True}))["data"]["state"], "started")

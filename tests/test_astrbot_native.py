@@ -19,7 +19,7 @@ from companion_v2.adapters.astrbot.native import (
 from companion_v2.execution.models import TaskError, digest
 from companion_v2.foundation.refs import SubjectKind, SubjectRef
 from companion_v2.identity_policy.personas import PersonaBinding, PersonaSelector, SelectorKind
-from tests.native_adapter_support import FakeEvent, FakePlatform, NativeFixture
+from tests.native_adapter_support import FakeEvent, FakePlatform, NativeFixture, completion
 from tests.test_management_access import INSTALLATION, NOW, ROLE
 
 
@@ -216,6 +216,51 @@ class NativeInputTests(NativeFixture, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.diagnostics.error_code, None)
         self.assertNotIn(private, str(response.diagnostics.to_record()))
 
+    async def test_task_role_reference_does_not_replace_native_persona_fence(self):
+        envelope = await self.envelope()
+        native_instruction = envelope.original.role_instruction
+        reference = "Stable self-page profile for the background task."
+        envelope = replace(envelope,
+            original=replace(envelope.original, role_instruction=reference),
+            native_role_instruction=native_instruction)
+
+        response = await self.native_model.generate(envelope)
+
+        self.assertEqual(response.status, "generated", response.diagnostics)
+        payload = self.native.provider.client.state.calls[0][0]
+        self.assertTrue(payload["messages"][0]["content"].startswith(reference))
+        self.assertNotIn(native_instruction, payload["messages"][0]["content"])
+
+    async def test_task_role_reference_still_rejects_native_persona_edits(self):
+        envelope = await self.envelope()
+        envelope = replace(envelope,
+            original=replace(envelope.original, role_instruction="Task role reference"),
+            native_role_instruction=envelope.original.role_instruction)
+        self.native.persona["prompt"] = "A different native persona prompt."
+
+        response = await self.native_model.generate(envelope)
+
+        self.assertEqual(response.status, "not_started")
+        self.assertEqual(response.diagnostics.error_code, "host_persona_changed")
+        self.assertEqual(self.native.provider.client.state.calls, [])
+
+    async def test_task_role_reference_rechecks_native_persona_after_generation(self):
+        envelope = await self.envelope()
+        envelope = replace(envelope,
+            original=replace(envelope.original, role_instruction="Task role reference"),
+            native_role_instruction=envelope.original.role_instruction)
+
+        async def change_persona(_payload, _tools):
+            self.native.persona["prompt"] = "A different native persona prompt."
+            return completion()
+
+        self.native.provider.client.state.behavior = change_persona
+        response = await self.native_model.generate(envelope)
+
+        self.assertEqual(response.status, "unknown")
+        self.assertEqual(response.failure.value, "role_recheck_failed")
+        self.assertEqual(len(self.native.provider.client.state.calls), 1)
+
     async def test_native_lookup_timeout_logs_elapsed_time_and_event_loop_overrun(self):
         release = asyncio.Event()
 
@@ -285,7 +330,8 @@ class NativeInputTests(NativeFixture, unittest.IsolatedAsyncioTestCase):
         self.assertEqual([r["text"] for r in history], ["我在这里。"])
         self.assertTrue(app.runtime.read_one("SELECT platform_ref FROM conversation_parts", ())["platform_ref"].endswith(":456"))
         self.assertEqual(self.native.provider.client.max_retries, 2)
-        self.assertEqual(self.native.provider.client.state.calls[0][0]["messages"][0]["content"], snapshot.instruction)
+        system_prompt = self.native.provider.client.state.calls[0][0]["messages"][0]["content"]
+        self.assertEqual(system_prompt.split("\n\n", 1)[0], snapshot.instruction)
 
     async def test_media_group_session_client_and_unmapped_account_are_explicit_failures(self):
         mutations = (

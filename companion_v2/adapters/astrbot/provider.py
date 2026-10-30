@@ -23,6 +23,7 @@ from .native import check_version, native_id
 from .memory_output import capture, explicit_refusal, response_format
 from .memory_recall import with_external_memory
 from .streaming import StreamTranscript
+from .responses import ResponsesTranscript, completion_evidence
 from .response_diagnostics import observe_completion
 from .provider_transport import definitely_not_sent
 
@@ -189,6 +190,9 @@ class AstrBotTextProvider:
             raise ValueError("provider needs the verified native provider class")
         self.provider_type = provider_type
         self.config = deepcopy(self.native.provider_config)
+        self.responses_api = self.config.get("type") == "openai_responses"
+        if self.responses_api and not callable(getattr(self.native, "_parse_response", None)):
+            raise ValueError("Responses provider has no verified native parser")
         self.config_hash = digest(self.config)
         self.model = self.native.get_model()
         self.client = self.native.client
@@ -202,7 +206,9 @@ class AstrBotTextProvider:
         self.streaming = streaming
         self.maximum_output_tokens, self.maximum_input_estimate = maximum_output_tokens, maximum_input_estimate
         extra = self.config.get("custom_extra_body", {})
-        if not isinstance(extra, dict) or RESERVED_EXTRA & extra.keys():
+        reserved = RESERVED_EXTRA | ({"input", "instructions", "text", "previous_response_id",
+                                     "conversation", "store"} if self.responses_api else set())
+        if not isinstance(extra, dict) or reserved & extra.keys():
             raise ValueError("custom provider parameters cannot override V2 routing, tools or output limits")
         # Validate the public limits without making a request.
         self.local_provider()
@@ -260,6 +266,9 @@ class AstrBotTextProvider:
             usage = read(raw, "usage")
             prompt = read(usage, "prompt_tokens")
             completion = read(usage, "completion_tokens")
+            if self.responses_api:
+                prompt = read(usage, "input_tokens")
+                completion = read(usage, "output_tokens")
             total = read(usage, "total_tokens")
             if total is None and type(prompt) is int and type(completion) is int:
                 total = prompt + completion
@@ -315,8 +324,9 @@ class AstrBotTextProvider:
             raise ValueError("native probe retries could not be disabled")
         # AstrBot 的 `_query` 固定以 stream=False 调用原生 client；payload 里
         # 再带 stream 会触发 `multiple values for keyword argument 'stream'`。
-        payload = {"model": self.model, "messages": [{"role": "user", "content": "Reply OK."}],
-                   self.output_parameter: 8}
+        payload, _ = await native._prepare_chat_payload(prompt=None,
+            contexts=[{"role": "user", "content": "Reply OK."}], model=self.model)
+        payload["max_output_tokens" if self.responses_api else self.output_parameter] = 8
         result = await native._query(payload, None, request_max_retries=1)
         self._current()
         if result is None:
@@ -330,7 +340,14 @@ class AstrBotTextProvider:
         transcript = None
         response = None
         diagnostics = ResponseDiagnostics()
+        native_role_instruction = (envelope.native_role_instruction
+            if envelope.native_role_instruction is not None else envelope.original.role_instruction)
         try:
+            await self.bridge.verify_role(
+                envelope.original.event.scope,
+                envelope.original.role_binding,
+                native_role_instruction,
+            )
             envelope = await with_external_memory(self.context, self.bridge, envelope)
             wire = build_wire(envelope, model_name=envelope.model_override or self.model)
             logger.debug("[CompanionV2][开发者追踪] 模型提示词组装 provider=%s output_format=%s messages=%s tools=%s",
@@ -338,7 +355,7 @@ class AstrBotTextProvider:
                          _developer_content(wire.tools))
             self._estimate(envelope, wire)
             await self.bridge.verify_role(envelope.original.event.scope, envelope.original.role_binding,
-                                          envelope.original.role_instruction)
+                                          native_role_instruction)
             self._current()
             native = copy(self.native)
             native.provider_config = deepcopy(self.config)
@@ -362,32 +379,38 @@ class AstrBotTextProvider:
                         if draft is not None and (envelope.reply_prefix_ready is None or envelope.reply_prefix_ready(draft)):
                             self._current()
                             await self.bridge.verify_role(envelope.original.event.scope, envelope.original.role_binding,
-                                                          envelope.original.role_instruction)
+                                                          native_role_instruction)
                             await envelope.on_reply_prefix(draft)
-                transcript = StreamTranscript(native.client, on_content)
+                transcript_type = ResponsesTranscript if self.responses_api else StreamTranscript
+                transcript = transcript_type(native.client, on_content)
             tools = self.tool_set_type(tools=[self.function_tool_type(**t, handler=None) for t in wire.tools]) if wire.tools else None
+            native_parser = (native._parse_response if self.responses_api
+                             else self.provider_type._parse_openai_completion.__get__(native))
 
             async def parse(completion, offered):
                 # Retain actual usage even if the host parser rejects an empty/filtered result.
                 nonlocal parse_failed, verified_refusal, diagnostics
-                observed.append(completion)
+                evidence = completion_evidence(completion) if self.responses_api else completion
+                observed.append(evidence)
                 logger.debug("[CompanionV2][开发者追踪] 原生解析输入 provider=%s response=%s",
                              self.provider_id, _developer_completion(completion))
-                diagnostics = observe_completion(completion)
+                diagnostics = observe_completion(evidence)
                 if transcript is not None:
                     try:
                         transcript.verify(completion)
                     except Exception:
                         diagnostics = replace(diagnostics, parse_state="stream_rejected")
                         raise
-                verified_refusal = explicit_refusal(completion) or bool(transcript and transcript.refusal)
+                verified_refusal = explicit_refusal(evidence) or bool(transcript and transcript.refusal)
                 if wire.output_format == "memory_reflection":
                     # Memory owns parsing and a durable recovery queue. Keep the
                     # provider's original text and completion reason, even when
                     # a native text parser would reject an empty/refused reply.
-                    return completion
+                    return evidence
                 try:
-                    parsed = await self.provider_type._parse_openai_completion(native, completion, offered)
+                    parsed = await native_parser(completion, offered)
+                    if self.responses_api:
+                        parsed.raw_completion = evidence
                     diagnostics = replace(diagnostics, parse_state="native_parsed",
                         parsed=ResponseTextSummary.from_text(getattr(parsed, "completion_text", None)))
                     logger.debug("[CompanionV2][开发者追踪] 原生解析结果 provider=%s completion_text=%r diagnostics=%s",
@@ -399,7 +422,10 @@ class AstrBotTextProvider:
                     logger.debug("[CompanionV2][开发者追踪] 原生解析失败 provider=%s error_type=%s",
                                  self.provider_id, type(error).__name__, exc_info=True)
                     raise
-            native._parse_openai_completion = parse
+            if self.responses_api:
+                native._parse_response = parse
+            else:
+                native._parse_openai_completion = parse
             if envelope.original.images or envelope.original.audios or envelope.original.videos:
                 # V2 has already materialized and validated exact data URLs. The
                 # host's general image resolver may download, re-encode or log
@@ -407,17 +433,21 @@ class AstrBotTextProvider:
                 async def keep_original_images(contexts):
                     return deepcopy(contexts)
                 native._materialize_context_image_parts = keep_original_images
-            payload, _ = await native._prepare_chat_payload(prompt=None, contexts=deepcopy(wire.messages),
+            payload, prepared_messages = await native._prepare_chat_payload(prompt=None, contexts=deepcopy(wire.messages),
                                                           model=envelope.model_override or self.model)
             if envelope.original.images or envelope.original.audios or envelope.original.videos:
                 def image_materials(messages):
                     return [message for message in messages if isinstance(message.get("content"), list)]
-                if image_materials(payload["messages"]) != image_materials(wire.messages):
+                if image_materials(prepared_messages if self.responses_api else payload["messages"]) != image_materials(wire.messages):
                     raise ValueError("native preparation changed original images or their coverage and attribution")
-            payload[self.output_parameter] = envelope.max_output_tokens
+            payload["max_output_tokens" if self.responses_api else self.output_parameter] = envelope.max_output_tokens
             structured = response_format(envelope.original)
             if structured is not None:
-                payload["response_format"] = structured
+                if self.responses_api:
+                    payload["text"] = {"format": ({"type": "json_schema", **structured["json_schema"]}
+                                      if structured["type"] == "json_schema" else structured)}
+                else:
+                    payload["response_format"] = structured
             logger.debug("[CompanionV2][开发者追踪] 实际模型请求 provider=%s model=%s payload=%s",
                          self.provider_id, payload.get("model", self.model), _developer_payload(payload))
             self._current()
@@ -428,7 +458,7 @@ class AstrBotTextProvider:
                 try:
                     envelope.record_cache_signature(signature_for_payload(
                         payload.get("model", envelope.model_override or self.model),
-                        payload.get("messages", ()), wire.tools))
+                        prepared_messages if self.responses_api else payload.get("messages", ()), wire.tools))
                 except Exception:
                     logger.debug("cache signature collection failed", exc_info=True)
         except Exception as error:
@@ -465,7 +495,7 @@ class AstrBotTextProvider:
             self._current()
             failure = ModelFailure.ROLE_RECHECK
             await self.bridge.verify_role(envelope.original.event.scope, envelope.original.role_binding,
-                                          envelope.original.role_instruction)
+                                          native_role_instruction)
             failure = ModelFailure.WIRE_DECODE
             if wire.output_format == "memory_reflection":
                 logger.debug("[CompanionV2][开发者追踪] 模型正文处理 provider=%s stage=captured body=%s",
@@ -492,7 +522,7 @@ class AstrBotTextProvider:
                 try:
                     self._current()
                     await self.bridge.verify_role(envelope.original.event.scope, envelope.original.role_binding,
-                                                  envelope.original.role_instruction)
+                                                  native_role_instruction)
                 except Exception:
                     failure = ModelFailure.ROLE_RECHECK
                 else:
@@ -503,7 +533,7 @@ class AstrBotTextProvider:
                 try:
                     self._current()
                     await self.bridge.verify_role(envelope.original.event.scope, envelope.original.role_binding,
-                                                  envelope.original.role_instruction)
+                                                  native_role_instruction)
                 except Exception:
                     failure = ModelFailure.ROLE_RECHECK
                 else:

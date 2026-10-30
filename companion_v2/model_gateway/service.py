@@ -99,8 +99,12 @@ class LocalModelGateway:
             run.validate()
             if connection.execute("SELECT 1 FROM model_requests WHERE task_id = ?", (run.task.task_id,)).fetchone():
                 raise TaskError("model_request_already_started", "inspect the original model calls instead of regenerating")
+            native_role_instruction = request.role_instruction
             request = self._task_role_request(run, request)
             plan = self.router.resolve(run, request)
+            if request.role_instruction != native_role_instruction:
+                plan = replace(plan, envelope=replace(plan.envelope,
+                    native_role_instruction=native_role_instruction))
             if tools:
                 if any("tools" not in provider.capabilities for provider in plan.providers):
                     raise TaskError("model_capability_mismatch", "tool continuation requires tool-capable providers")

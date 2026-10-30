@@ -284,6 +284,14 @@ class CacheSignature:
 
 @dataclass(frozen=True)
 class ModelEnvelope:
+    """Carry model content and the independent native persona fence.
+
+    Args:
+        native_role_instruction: Captured host persona text used for native
+            rechecks, even when a task uses a different model-facing role
+            reference. None falls back to the original request's role text.
+    """
+
     original: PromptRequest
     task_prompt: str
     max_output_tokens: int
@@ -300,6 +308,7 @@ class ModelEnvelope:
     on_reply_prefix: Callable[[ModelDraft], Awaitable[bool]] | None = field(default=None, compare=False, repr=False)
     reply_prefix_ready: Callable[[ModelDraft], bool] | None = field(default=None, compare=False, repr=False)
     refusal_terms: tuple[str, ...] = ()
+    native_role_instruction: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
